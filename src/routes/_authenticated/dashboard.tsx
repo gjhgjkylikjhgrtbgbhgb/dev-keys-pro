@@ -31,17 +31,38 @@ import { supabase } from "@/integrations/supabase/client";
 
 const statsQueryOptions = queryOptions({
   queryKey: ["license-stats"],
-  queryFn: () => getLicenseStats(),
+  queryFn: async () => {
+    try {
+      return await getLicenseStats();
+    } catch (error) {
+      console.error("Stats error:", error);
+      return { total: 0, active: 0 };
+    }
+  },
 });
 
 const licensesQueryOptions = queryOptions({
   queryKey: ["licenses"],
-  queryFn: () => getLicenses(),
+  queryFn: async () => {
+    try {
+      return await getLicenses();
+    } catch (error) {
+      console.error("Licenses error:", error);
+      return [];
+    }
+  },
 });
 
 const resellersQueryOptions = queryOptions({
   queryKey: ["resellers"],
-  queryFn: () => getResellers(),
+  queryFn: async () => {
+    try {
+      return await getResellers();
+    } catch (error) {
+      console.error("Resellers error:", error);
+      return [];
+    }
+  },
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
