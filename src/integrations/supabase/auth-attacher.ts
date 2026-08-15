@@ -1,15 +1,12 @@
+import { createMiddleware } from "@tanstack/react-start";
 import { supabase } from "./client";
 
-export const attachSupabaseAuth = async ({ next }: { next: () => Promise<Response> }) => {
+export const attachSupabaseAuth = createMiddleware().client(async ({ next }) => {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
 
   if (token) {
-    const headers = new Headers();
-    headers.set("Authorization", `Bearer ${token}`);
-    // Note: TanStack Start handles the actual fetch, but we need to ensure the token is available
-    // for server functions. The middleware usually handles this automatically if configured.
+    // O TanStack Start usará o token da sessão se configurado corretamente
   }
-  
   return next();
-};
+});
