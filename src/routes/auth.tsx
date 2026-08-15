@@ -72,6 +72,14 @@ function AuthPage() {
       }
 
       toast.success("Login realizado com sucesso!");
+      
+      // Salva estado de autenticação para redundância e estabilidade
+      localStorage.setItem('auth_status', JSON.stringify({ 
+        phone: cleanPhone, 
+        role: isMaster ? 'admin' : 'reseller', 
+        authenticated: true 
+      }));
+
       window.location.href = "/dashboard";
     } catch (error: any) {
       console.error("Auth error:", error);

@@ -71,18 +71,27 @@ function DashboardPage() {
   const [transferData, setTransferData] = useState({ resellerId: "", amount: 1 });
   const [isTransferOpen, setIsTransferOpen] = useState(false);
 
+  // Fallback data para evitar quebras se a query retornar undefined/null
+  const stats = statsQuery.data || { total: 0, active: 0 };
+  const licenses = licensesQuery.data || [];
+  const resellers = resellersQuery.data || [];
+
   // Verificar se o usuário é admin
   useSuspenseQuery({
     queryKey: ["is-admin"],
     queryFn: async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.user) {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", session.session.user.id)
-          .single();
-        setIsAdmin(data?.role === "admin");
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+          setIsAdmin(data?.role === "admin");
+        }
+      } catch (err) {
+        console.error("Erro ao verificar admin:", err);
       }
       return true;
     }
@@ -176,7 +185,7 @@ function DashboardPage() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statsQuery.data.total}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
@@ -185,7 +194,7 @@ function DashboardPage() {
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statsQuery.data.active}</div>
+            <div className="text-2xl font-bold">{stats.active}</div>
           </CardContent>
         </Card>
         {isAdmin && (
@@ -195,7 +204,7 @@ function DashboardPage() {
               <Users className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{resellersQuery.data.length}</div>
+              <div className="text-2xl font-bold">{resellers.length}</div>
             </CardContent>
           </Card>
         )}
@@ -229,7 +238,7 @@ function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {licensesQuery.data.map((license: any) => (
+                  {licenses.map((license: any) => (
                     <TableRow key={license.id}>
                       <TableCell className="font-mono font-bold">{license.key}</TableCell>
                       <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
@@ -318,7 +327,7 @@ function DashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {resellersQuery.data.map((reseller: any) => (
+                      {resellers.map((reseller: any) => (
                         <TableRow key={reseller.id}>
                           <TableCell className="font-medium">{reseller.full_name}</TableCell>
                           <TableCell>
