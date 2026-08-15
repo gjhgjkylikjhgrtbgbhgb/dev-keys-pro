@@ -104,6 +104,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_inventory: {
+        Args: { amount: number; row_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "reseller"
