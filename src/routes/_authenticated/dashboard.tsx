@@ -130,10 +130,15 @@ function DashboardPage() {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
     setIsProcessing(true);
+    const MAX_SIZE = 212 * 1024; // 217.088 bytes
     try {
       const newLicenses = [];
       for (const file of acceptedFiles) {
         try {
+          if (file.size > MAX_SIZE) {
+            toast.warning(`Arquivo ${file.name} ignorado (excede 212 KB)`);
+            continue;
+          }
           const content = await file.text();
           const key = Math.floor(100000 + Math.random() * 900000).toString();
           newLicenses.push({ key, filename: file.name, content });
@@ -160,7 +165,10 @@ function DashboardPage() {
     onDrop,
     multiple: true,
     noClick: false,
-    noKeyboard: false
+    noKeyboard: false,
+    accept: {
+      '*/*': []
+    }
   });
 
   const handleCreateReseller = async (e: React.FormEvent) => {
@@ -431,7 +439,7 @@ function DashboardPage() {
               >
                 <input {...getInputProps()} />
                 <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                {isProcessing ? <p>Processando...</p> : <p>Solte arquivos .txt ou .config aqui</p>}
+                {isProcessing ? <p>Processando...</p> : <p>Solte qualquer arquivo aqui (máx 212 KB)</p>}
               </div>
             </CardContent>
           </Card>
