@@ -66,14 +66,23 @@ const resellersQueryOptions = queryOptions({
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  loader: ({ context }) => {
-    return Promise.all([
-      context.queryClient.ensureQueryData(statsQueryOptions),
-      context.queryClient.ensureQueryData(licensesQueryOptions),
-      context.queryClient.ensureQueryData(resellersQueryOptions),
-    ]);
+  loader: async ({ context }) => {
+    try {
+      await Promise.allSettled([
+        context.queryClient.ensureQueryData(statsQueryOptions),
+        context.queryClient.ensureQueryData(licensesQueryOptions),
+        context.queryClient.ensureQueryData(resellersQueryOptions),
+      ]);
+    } catch (e) {
+      console.error("Loader failed, continuing to component", e);
+    }
+    return {};
   },
   component: DashboardPage,
+  errorComponent: ({ error }) => {
+    console.error("Dashboard error boundary:", error);
+    return <DashboardPage />;
+  }
 });
 
 function DashboardPage() {
