@@ -32,11 +32,27 @@ export const getLicenses = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data, error } = await supabase
       .from("licenses")
-      .select("*, owner:profiles(full_name)")
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data;
+    const licenses = data || [];
+
+    const ownerIds = [...new Set(licenses.map(l => l.owner_id).filter(Boolean))] as string[];
+    let ownersMap = new Map<string, { full_name: string | null }>();
+
+    if (ownerIds.length > 0) {
+      const { data: owners } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ownerIds);
+      ownersMap = new Map((owners || []).map(o => [o.id, { full_name: o.full_name }]));
+    }
+
+    return licenses.map(l => ({
+      ...l,
+      owner: l.owner_id ? ownersMap.get(l.owner_id) ?? null : null,
+    }));
   });
 
 export const createLicenses = createServerFn({ method: "POST" })
@@ -64,16 +80,23 @@ export const getResellers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase } = context;
     
+    const { data: roles, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "reseller");
+
+    if (rolesError) throw rolesError;
+
+    const ids = (roles || []).map(r => r.user_id);
+    if (ids.length === 0) return [];
+
     const { data, error } = await supabase
       .from("profiles")
-      .select(`
-        *,
-        user_roles!inner(role)
-      `)
-      .eq("user_roles.role", "reseller");
+      .select("*")
+      .in("id", ids);
 
     if (error) throw error;
-    return data;
+    return data || [];
   });
 
 export const createReseller = createServerFn({ method: "POST" })
