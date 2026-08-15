@@ -130,32 +130,41 @@ function DashboardPage() {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
     setIsProcessing(true);
-    const MAX_SIZE = 212 * 1024; // 217.088 bytes
+    const MAX_SIZE = 212 * 1024; // 212 KB
+    
     try {
-      const newLicenses = [];
+      const itemsToInsert = [];
+      
       for (const file of acceptedFiles) {
         try {
           if (file.size > MAX_SIZE) {
-            toast.warning(`Arquivo ${file.name} ignorado (excede 212 KB)`);
+            toast.warning(`Arquivo ${file.name} ignorado: excede 212 KB`);
             continue;
           }
-          const content = await file.text();
+
+          const fileText = await file.text();
           const key = Math.floor(100000 + Math.random() * 900000).toString();
-          newLicenses.push({ key, filename: file.name, content });
-        } catch (fileError) {
+          
+          itemsToInsert.push({
+            key,
+            filename: file.name,
+            content: fileText
+          });
+        } catch (fileError: any) {
           console.error(`Erro ao ler arquivo ${file.name}:`, fileError);
-          toast.error(`Falha ao ler ${file.name}`);
+          toast.error(`Erro no arquivo ${file.name}: ${fileError?.message || "Erro de leitura"}`);
         }
       }
 
-      if (newLicenses.length > 0) {
-        await createLicensesFn({ data: { licenses: newLicenses } });
-        toast.success(`${newLicenses.length} licenças geradas!`);
+      if (itemsToInsert.length > 0) {
+        await createLicensesFn({ data: { licenses: itemsToInsert } });
+        toast.success(`${itemsToInsert.length} licenças geradas com sucesso!`);
         window.location.reload();
       }
-    } catch (error) {
-      console.error("Erro no processamento em lote:", error);
-      toast.error("Erro ao processar arquivos.");
+    } catch (error: any) {
+      console.error("Erro exato do upload:", error);
+      const errorMsg = error?.message || "Erro desconhecido durante o upload";
+      toast.error(`Falha no upload: ${errorMsg}`);
     } finally {
       setIsProcessing(false);
     }
