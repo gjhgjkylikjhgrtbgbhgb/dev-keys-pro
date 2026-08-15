@@ -22,11 +22,11 @@ const csrfMiddleware = createCsrfMiddleware({
 });
 
 // Middleware para anexar o token de autenticação do Supabase às chamadas de função de servidor
-const authMiddleware = createMiddleware().client(async ({ next }: { next: any }) => {
-  const { data } = await supabase.auth.getSession();
-  // TanStack Start lida com a propagação do token se registrado corretamente
+const authMiddleware = createMiddleware({ type: "function" }).client(async ({ next }: { next: any }) => {
+  await supabase.auth.getSession();
   return next();
 });
+
 
 
 export const startInstance = createStart(() => ({
