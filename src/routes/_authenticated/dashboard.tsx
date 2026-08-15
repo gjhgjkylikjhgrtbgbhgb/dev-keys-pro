@@ -154,7 +154,7 @@ function DashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {licensesQuery.data.map((license) => (
+              {licensesQuery.data.map((license: any) => (
                 <TableRow key={license.id}>
                   <TableCell className="font-mono font-bold text-lg">{license.key}</TableCell>
                   <TableCell>{license.filename}</TableCell>
