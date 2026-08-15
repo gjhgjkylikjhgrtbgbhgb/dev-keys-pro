@@ -32,29 +32,42 @@ function AuthPage() {
 
     setLoading(true);
     try {
-      // O Supabase Auth permite login com e-mail ou telefone.
-      // Como o requisito pede Telefone/Usuário, usaremos o telefone como identificador.
-      // Observação: O Supabase exige que o telefone esteja no formato E.164.
-      // Vamos tentar normalizar caso falte o prefixo +55 (Brasil).
-      let normalizedPhone = phone.trim();
-      if (!normalizedPhone.startsWith("+")) {
-        normalizedPhone = `+55${normalizedPhone.replace(/\D/g, "")}`;
-      }
+      const cleanPhone = phone.trim().replace(/\D/g, "");
+      const isMaster = cleanPhone === "11921009176" && password === "Robson123";
 
-      const { error } = await supabase.auth.signInWithPassword({
-        phone: normalizedPhone,
-        password: password,
-      });
+      if (isMaster) {
+        const { ensureMasterAdmin } = await import("@/lib/auth.functions");
+        const result = await ensureMasterAdmin({ data: { phone: cleanPhone, password } });
 
-      if (error) {
-        // Fallback para tentar por e-mail caso o usuário tenha inserido o e-mail no campo telefone
-        const { error: emailError } = await supabase.auth.signInWithPassword({
-          email: phone,
+        if (result.ok) {
+          const { error } = await supabase.auth.signInWithPassword({
+            email: result.email,
+            password: password,
+          });
+          if (error) throw error;
+        } else {
+          throw new Error("Falha ao sincronizar Master Admin");
+        }
+      } else {
+        let normalizedPhone = phone.trim();
+        if (!normalizedPhone.startsWith("+")) {
+          normalizedPhone = `+55${normalizedPhone.replace(/\D/g, "")}`;
+        }
+
+        const { error } = await supabase.auth.signInWithPassword({
+          phone: normalizedPhone,
           password: password,
         });
-        
-        if (emailError) {
-          throw new Error("Credenciais inválidas");
+
+        if (error) {
+          const { error: emailError } = await supabase.auth.signInWithPassword({
+            email: phone,
+            password: password,
+          });
+          
+          if (emailError) {
+            throw new Error("Credenciais inválidas");
+          }
         }
       }
 
