@@ -157,7 +157,16 @@ function DashboardPage() {
       }
 
       if (itemsToInsert.length > 0) {
-        await createLicensesFn({ data: { licenses: itemsToInsert } });
+        const { error: insertError } = await supabase
+          .from("licenses")
+          .insert(itemsToInsert.map(l => ({
+            ...l,
+            uses_remaining: 3,
+            status: "active"
+          })));
+
+        if (insertError) throw insertError;
+
         toast.success(`${itemsToInsert.length} licenças geradas com sucesso!`);
         window.location.reload();
       }
