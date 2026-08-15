@@ -131,17 +131,25 @@ function DashboardPage() {
     if (acceptedFiles.length === 0) return;
     setIsProcessing(true);
     try {
-      const newLicenses = await Promise.all(
-        acceptedFiles.map(async (file) => {
+      const newLicenses = [];
+      for (const file of acceptedFiles) {
+        try {
           const content = await file.text();
           const key = Math.floor(100000 + Math.random() * 900000).toString();
-          return { key, filename: file.name, content };
-        })
-      );
-      await createLicensesFn({ data: { licenses: newLicenses } });
-      toast.success(`${newLicenses.length} licenças geradas!`);
-      window.location.reload();
+          newLicenses.push({ key, filename: file.name, content });
+        } catch (fileError) {
+          console.error(`Erro ao ler arquivo ${file.name}:`, fileError);
+          toast.error(`Falha ao ler ${file.name}`);
+        }
+      }
+
+      if (newLicenses.length > 0) {
+        await createLicensesFn({ data: { licenses: newLicenses } });
+        toast.success(`${newLicenses.length} licenças geradas!`);
+        window.location.reload();
+      }
     } catch (error) {
+      console.error("Erro no processamento em lote:", error);
       toast.error("Erro ao processar arquivos.");
     } finally {
       setIsProcessing(false);
@@ -150,7 +158,9 @@ function DashboardPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'text/plain': ['.txt'], 'application/octet-stream': ['.config'] }
+    multiple: true,
+    noClick: false,
+    noKeyboard: false
   });
 
   const handleCreateReseller = async (e: React.FormEvent) => {
