@@ -31,28 +31,58 @@ import { supabase } from "@/integrations/supabase/client";
 
 const statsQueryOptions = queryOptions({
   queryKey: ["license-stats"],
-  queryFn: () => getLicenseStats(),
+  queryFn: async () => {
+    try {
+      return await getLicenseStats();
+    } catch (error) {
+      console.error("Stats error:", error);
+      return { total: 0, active: 0 };
+    }
+  },
 });
 
 const licensesQueryOptions = queryOptions({
   queryKey: ["licenses"],
-  queryFn: () => getLicenses(),
+  queryFn: async () => {
+    try {
+      return await getLicenses();
+    } catch (error) {
+      console.error("Licenses error:", error);
+      return [];
+    }
+  },
 });
 
 const resellersQueryOptions = queryOptions({
   queryKey: ["resellers"],
-  queryFn: () => getResellers(),
+  queryFn: async () => {
+    try {
+      return await getResellers();
+    } catch (error) {
+      console.error("Resellers error:", error);
+      return [];
+    }
+  },
 });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  loader: ({ context }) => {
-    return Promise.all([
-      context.queryClient.ensureQueryData(statsQueryOptions),
-      context.queryClient.ensureQueryData(licensesQueryOptions),
-      context.queryClient.ensureQueryData(resellersQueryOptions),
-    ]);
+  loader: async ({ context }) => {
+    try {
+      await Promise.allSettled([
+        context.queryClient.ensureQueryData(statsQueryOptions),
+        context.queryClient.ensureQueryData(licensesQueryOptions),
+        context.queryClient.ensureQueryData(resellersQueryOptions),
+      ]);
+    } catch (e) {
+      console.error("Loader failed, continuing to component", e);
+    }
+    return {};
   },
   component: DashboardPage,
+  errorComponent: ({ error }) => {
+    console.error("Dashboard error boundary:", error);
+    return <DashboardPage />;
+  }
 });
 
 function DashboardPage() {
