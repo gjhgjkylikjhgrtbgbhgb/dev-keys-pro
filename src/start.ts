@@ -23,8 +23,12 @@ const csrfMiddleware = createCsrfMiddleware({
 
 // Middleware para anexar o token de autenticação do Supabase às chamadas de função de servidor
 const authMiddleware = createMiddleware({ type: "function" }).client(async ({ next }: { next: any }) => {
-  await supabase.auth.getSession();
-  return next();
+  const { data: { session } } = await supabase.auth.getSession();
+  return next({
+    headers: session ? {
+      Authorization: `Bearer ${session.access_token}`,
+    } : {},
+  });
 });
 
 
