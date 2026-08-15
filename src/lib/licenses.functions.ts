@@ -32,11 +32,27 @@ export const getLicenses = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data, error } = await supabase
       .from("licenses")
-      .select("*, owner:profiles(full_name)")
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
-    return data;
+    const licenses = data || [];
+
+    const ownerIds = [...new Set(licenses.map(l => l.owner_id).filter(Boolean))] as string[];
+    let ownersMap = new Map<string, { full_name: string | null }>();
+
+    if (ownerIds.length > 0) {
+      const { data: owners } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", ownerIds);
+      ownersMap = new Map((owners || []).map(o => [o.id, { full_name: o.full_name }]));
+    }
+
+    return licenses.map(l => ({
+      ...l,
+      owner: l.owner_id ? ownersMap.get(l.owner_id) ?? null : null,
+    }));
   });
 
 export const createLicenses = createServerFn({ method: "POST" })
