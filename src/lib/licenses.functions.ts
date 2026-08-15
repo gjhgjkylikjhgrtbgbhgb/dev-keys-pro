@@ -80,16 +80,23 @@ export const getResellers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase } = context;
     
+    const { data: roles, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "reseller");
+
+    if (rolesError) throw rolesError;
+
+    const ids = (roles || []).map(r => r.user_id);
+    if (ids.length === 0) return [];
+
     const { data, error } = await supabase
       .from("profiles")
-      .select(`
-        *,
-        user_roles!inner(role)
-      `)
-      .eq("user_roles.role", "reseller");
+      .select("*")
+      .in("id", ids);
 
     if (error) throw error;
-    return data;
+    return data || [];
   });
 
 export const createReseller = createServerFn({ method: "POST" })
