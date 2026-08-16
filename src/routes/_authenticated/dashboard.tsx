@@ -11,7 +11,10 @@ import {
   toggleAdminStatus,
   updateLastSeen,
   deleteExhaustedLicenses,
-  deleteReseller
+  deleteReseller,
+  getUnassignedLicenses,
+  assignLicense,
+  deleteLicense
 } from "@/lib/licenses.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -28,7 +32,7 @@ import { toast } from "sonner";
 import { 
   Copy, Upload, CheckCircle2, XCircle, Clock, Database, 
   Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare, ShieldAlert,
-  RefreshCw, Eye, EyeOff
+  RefreshCw, Eye, EyeOff, Cloud, Key, Trash2
 } from "lucide-react";
 
 import { format } from "date-fns";
