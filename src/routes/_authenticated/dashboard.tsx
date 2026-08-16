@@ -992,6 +992,39 @@ function DashboardPage() {
         </TabsContent>
       </Tabs>
 
+      <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
+        <DialogContent className="bg-[#1E293B] border-white/5 text-white">
+          <DialogHeader>
+            <DialogTitle>Atribuir Licença</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Selecione o revendedor para vincular esta licença.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Revendedor</Label>
+              <Select onValueChange={(val) => setAssignData({...assignData, resellerId: val})}>
+                <SelectTrigger className="bg-[#0F172A] border-white/10">
+                  <SelectValue placeholder="Selecione um revendedor" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1E293B] border-white/5 text-white">
+                  {resellers.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.full_name} ({r.phone})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>Cancelar</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleAssignLicense} disabled={isProcessing}>
+              Confirmar Atribuição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
         <DialogContent>
           <DialogHeader>
