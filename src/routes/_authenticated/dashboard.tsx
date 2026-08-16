@@ -132,6 +132,9 @@ function DashboardPage() {
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
   const isMasterAdmin = currentUser?.phone?.includes('11921009176') || currentUser?.is_admin === true;
+  const isAdmin = isMasterAdmin;
+  const isMaster = isMasterAdmin;
+  const isSubAdmin = false; // Removido suporte a Sub-Admin
 
 
 
