@@ -247,6 +247,10 @@ function DashboardPage() {
 
   const handleTransfer = async () => {
     try {
+      if (!isAdmin && currentUser?.credits < transferData.amount) {
+        toast.error("Saldo de créditos insuficiente!");
+        return;
+      }
       await transferFn({ data: transferData });
       toast.success("Licenças transferidas!");
       setIsTransferOpen(false);
@@ -355,19 +359,18 @@ function DashboardPage() {
             <p className="text-xs text-muted-foreground">Disponíveis para uso</p>
           </CardContent>
         </Card>
-        {isAdmin && (
-          <Card className="bg-[#1E293B] border-white/5">
-
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Revendedores</CardTitle>
-              <Users className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{resellers.length}</div>
-              <p className="text-xs text-muted-foreground">Gestão de Sub-Admins e Revendedores</p>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="bg-[#1E293B] border-white/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Revendedores</CardTitle>
+            <Users className="h-4 w-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{resellers.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {isAdmin ? "Gestão de Sub-Admins e Revendedores" : "Seus revendedores vinculados"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {currentUser?.credits === 0 && !isAdmin && (
@@ -399,13 +402,13 @@ function DashboardPage() {
         </div>
       )}
 
-      <Tabs defaultValue="licenses" className="w-full">
+      <Tabs defaultValue={isAdmin ? "licenses" : "resellers"} className="w-full">
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
-          <TabsTrigger value="licenses" className="px-6 py-2">Licenças</TabsTrigger>
+          <TabsTrigger value="licenses" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Licenças</TabsTrigger>
+          <TabsTrigger value="resellers" className="px-6 py-2">Revendedores</TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="resellers" className="px-6 py-2">Revendedores</TabsTrigger>
+            <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
           )}
-          <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
         </TabsList>
 
         <TabsContent value="licenses" className="mt-6">
@@ -518,8 +521,7 @@ function DashboardPage() {
           </Card>
         </TabsContent>
 
-        {isAdmin && (
-          <TabsContent value="resellers" className="mt-6 space-y-6">
+        <TabsContent value="resellers" className="mt-6 space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Gestão de Acessos</h2>
               <Dialog open={isResellerModalOpen} onOpenChange={setIsResellerModalOpen}>
@@ -690,14 +692,16 @@ function DashboardPage() {
                             >
                               <Send className="h-3 w-3 mr-1" /> Créditos
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                              className={`border-white/10 hover:bg-white/5 ${reseller.is_admin ? "text-blue-400" : ""}`}
-                            >
-                              {reseller.is_admin ? "Remover Admin" : "Tornar Admin"}
-                            </Button>
+                            {isAdmin && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                                className={`border-white/10 hover:bg-white/5 ${reseller.is_admin ? "text-blue-400" : ""}`}
+                              >
+                                {reseller.is_admin ? "Remover Admin" : "Tornar Admin"}
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon"
@@ -800,20 +804,21 @@ function DashboardPage() {
                         <XCircle className="h-3 w-3 mr-1" /> Excluir
                       </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
-                      onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                    >
-                      {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
-                    </Button>
+                    {isAdmin && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
+                        onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                      >
+                        {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
           </TabsContent>
-        )}
 
         <TabsContent value="upload" className="mt-6">
           {!isAdmin && (

@@ -81,11 +81,25 @@ export const getResellers = createServerFn({ method: "GET" })
     const { supabase } = context;
     
     const MASTER_PHONE = "+5511921009176";
+    const { data: { user } } = await supabase.auth.getUser();
     
-    const { data: profiles, error: profileError } = await supabase
-      .from("profiles")
-      .select("*")
-      .neq("phone", MASTER_PHONE);
+    if (!user) throw new Error("Não autorizado");
+
+    // Identifica se é o Master Admin pelo telefone
+    const userPhone = user.phone?.replace(/\D/g, "") || "";
+    const isMaster = userPhone === "11921009176";
+
+    let query = supabase.from("profiles").select("*");
+
+    if (isMaster) {
+      // Master vê todos (exceto ele mesmo)
+      query = query.neq("phone", MASTER_PHONE);
+    } else {
+      // Sub-Admin vê apenas seus filhos
+      query = query.eq("parent_id", user.id);
+    }
+
+    const { data: profiles, error: profileError } = await query;
 
     if (profileError) throw profileError;
     
@@ -159,7 +173,15 @@ export const createReseller = createServerFn({ method: "POST" })
   }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabase } = context;
     const { phone, password, full_name, whatsapp, credits = 0 } = data;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autorizado");
+
+    const userPhone = user.phone?.replace(/\D/g, "") || "";
+    const isMaster = userPhone === "11921009176";
+    const parentId = isMaster ? null : user.id;
 
     if (!phone || !password || !full_name) {
       throw new Error("Campos obrigatórios ausentes");
@@ -206,6 +228,7 @@ export const createReseller = createServerFn({ method: "POST" })
         is_blocked: false,
         is_admin: false,
         support_whatsapp: whatsapp || "",
+        parent_id: parentId,
         last_seen: new Date().toISOString()
       } as any, { onConflict: 'id' });
 
@@ -260,54 +283,58 @@ export const transferLicenses = createServerFn({ method: "POST" })
   }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabase } = context;
     const { resellerId, amount } = data;
 
-    // 1. Buscar licenças disponíveis (livres e ativas)
-    const { data: availableLicenses, error: fetchError } = await supabaseAdmin
-      .from("licenses")
-      .select("id")
-      .is("owner_id", null)
-      .eq("status", "active")
-      .limit(amount);
+    const { data: { user: sender } } = await supabase.auth.getUser();
+    if (!sender) throw new Error("Não autorizado");
 
-    if (fetchError) throw fetchError;
-    if (!availableLicenses || availableLicenses.length < amount) {
-      throw new Error(`Estoque insuficiente de licenças livres. Disponível: ${availableLicenses?.length || 0}`);
-    }
-
-    const licenseIds = availableLicenses.map(l => l.id);
-
-    // 2. Vincular as licenças ao revendedor
-    const { error: updateError } = await supabaseAdmin
-      .from("licenses")
-      .update({ owner_id: resellerId })
-      .in("id", licenseIds);
-
-    if (updateError) throw updateError;
-
-    // 3. Incrementar créditos no perfil usando o RPC com service_role
-    const { error: profileError } = await supabaseAdmin.rpc("increment_credits", {
-      row_id: resellerId,
-      amount: amount
+    // 1. Chamar RPC segura que valida saldo
+    const { error: rpcError } = await supabaseAdmin.rpc("transfer_credits_safe", {
+      sender_id: sender.id,
+      receiver_id: resellerId,
+      transfer_amount: amount
     });
 
-    if (profileError) {
-      console.error("RPC increment_credits error:", profileError);
-      // Fallback: update direto se o RPC falhar ou não for encontrado
-      const { data: currentProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("credits")
-        .eq("id", resellerId)
-        .single();
-      
-      const newCredits = (currentProfile?.credits || 0) + amount;
-      
-      const { error: updateCreditsError } = await supabaseAdmin
-        .from("profiles")
-        .update({ credits: newCredits } as any)
-        .eq("id", resellerId);
-        
-      if (updateCreditsError) throw updateCreditsError;
+    if (rpcError) {
+      console.error("RPC transfer_credits_safe error:", rpcError);
+      throw new Error(rpcError.message || "Falha na transferência de créditos.");
+    }
+
+    // 2. Tentar vincular licenças físicas se for o Master
+    const userPhone = sender.phone?.replace(/\D/g, "") || "";
+    const isMaster = userPhone === "11921009176";
+
+    if (isMaster) {
+      const { data: availableLicenses } = await supabaseAdmin
+        .from("licenses")
+        .select("id")
+        .is("owner_id", null)
+        .eq("status", "active")
+        .limit(amount);
+
+      if (availableLicenses && availableLicenses.length >= amount) {
+        await supabaseAdmin
+          .from("licenses")
+          .update({ owner_id: resellerId })
+          .in("id", availableLicenses.map(l => l.id));
+      }
+    } else {
+      // Se for Sub-Admin, ele transfere o saldo dele para o revendedor
+      // As licenças físicas dele (owner_id = sub_admin.id) passam para o revendedor
+      const { data: subAdminLicenses } = await supabaseAdmin
+        .from("licenses")
+        .select("id")
+        .eq("owner_id", sender.id)
+        .eq("status", "active")
+        .limit(amount);
+
+      if (subAdminLicenses && subAdminLicenses.length > 0) {
+        await supabaseAdmin
+          .from("licenses")
+          .update({ owner_id: resellerId })
+          .in("id", subAdminLicenses.map(l => l.id));
+      }
     }
 
     return { success: true };
