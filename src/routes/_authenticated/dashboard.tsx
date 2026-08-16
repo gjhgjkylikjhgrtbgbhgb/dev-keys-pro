@@ -1041,14 +1041,25 @@ function DashboardPage() {
                       </Button>
                     </div>
                     {isMaster && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
-                        onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                      >
-                        {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
-                      </Button>
+                      <div className="flex flex-col gap-2 pt-2 border-t border-white/5 mt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
+                          onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                        >
+                          {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className={`w-full border-white/10 ${reseller.can_upload ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}`}
+                          onClick={() => handleToggleUpload(reseller.id, reseller.can_upload)}
+                        >
+                          {reseller.can_upload ? <Lock className="h-3 w-3 mr-1" /> : <Unlock className="h-3 w-3 mr-1" />}
+                          {reseller.can_upload ? "Bloquear Upload" : "Liberar Upload"}
+                        </Button>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
