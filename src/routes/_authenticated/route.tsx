@@ -25,11 +25,12 @@ function AuthenticatedLayout() {
     async function loadProfile() {
       try {
         const MASTER_PHONE = "11921009176";
-        const userPhone = user.phone?.replace(/\D/g, "") || "";
+        const userPhone = (user as any).phone?.replace(/\D/g, "") || "";
         
         // Immediate check for master admin via phone or metadata
         const isActuallyMaster = userPhone === MASTER_PHONE || 
-                                user.user_metadata?.phone?.replace(/\D/g, "") === MASTER_PHONE;
+                                (user as any).user_metadata?.phone?.replace(/\D/g, "") === MASTER_PHONE;
+
 
         const { data: profileData } = await supabase
           .from("profiles")
@@ -64,5 +65,5 @@ function AuthenticatedLayout() {
     );
   }
 
-  return <Outlet context={{ user, profile, isAdmin }} />;
+  return <Outlet /> ;
 }
