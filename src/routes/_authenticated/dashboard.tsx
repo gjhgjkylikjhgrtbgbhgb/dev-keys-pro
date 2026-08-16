@@ -347,7 +347,7 @@ function DashboardPage() {
     
     setIsProcessing(true);
     try {
-      const { error } = await (isAdmin 
+      const { error } = await (isMasterAdmin 
         ? supabase.from("licenses").delete().or("uses_remaining.lte.0,status.eq.exhausted")
         : supabase.from("licenses").delete().eq("owner_id", currentUser?.id).or("uses_remaining.lte.0,status.eq.exhausted")
       );
