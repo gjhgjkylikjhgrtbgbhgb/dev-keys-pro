@@ -199,6 +199,79 @@ export const transferLicenses = createServerFn({ method: "POST" })
 
     if (profileError) throw profileError;
 
+    // Também atualiza a coluna credits para manter sincronia
+    await supabase.rpc("increment_credits", {
+      row_id: resellerId,
+      amount: amount
+    });
+
+    return { success: true };
+  });
+
+export const toggleAdminStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: any) => z.object({
+    userId: z.string(),
+    isAdmin: z.boolean(),
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ is_admin: data.isAdmin })
+      .eq("id", data.userId);
+
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const updateSupportWhatsapp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: any) => z.object({
+    userId: z.string(),
+    whatsapp: z.string(),
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ support_whatsapp: data.whatsapp })
+      .eq("id", data.userId);
+
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const deleteExhaustedLicenses = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) throw new Error("Não autorizado");
+
+    const { error } = await supabase
+      .from("licenses")
+      .delete()
+      .eq("owner_id", user.id)
+      .eq("status", "exhausted");
+
+    if (error) throw error;
+    return { success: true };
+  });
+
+export const updateLastSeen = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      await supabase
+        .from("profiles")
+        .update({ last_seen: new Date().toISOString() })
+        .eq("id", user.id);
+    }
     return { success: true };
   });
 
