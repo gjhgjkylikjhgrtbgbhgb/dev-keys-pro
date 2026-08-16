@@ -50,27 +50,39 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string | null
+          credits: number | null
           full_name: string | null
           id: string
+          is_admin: boolean | null
           is_blocked: boolean | null
+          last_seen: string | null
           license_inventory: number | null
           phone: string | null
+          support_whatsapp: string | null
         }
         Insert: {
           created_at?: string | null
+          credits?: number | null
           full_name?: string | null
           id: string
+          is_admin?: boolean | null
           is_blocked?: boolean | null
+          last_seen?: string | null
           license_inventory?: number | null
           phone?: string | null
+          support_whatsapp?: string | null
         }
         Update: {
           created_at?: string | null
+          credits?: number | null
           full_name?: string | null
           id?: string
+          is_admin?: boolean | null
           is_blocked?: boolean | null
+          last_seen?: string | null
           license_inventory?: number | null
           phone?: string | null
+          support_whatsapp?: string | null
         }
         Relationships: []
       }
