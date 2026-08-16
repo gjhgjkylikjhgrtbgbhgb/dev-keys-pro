@@ -801,20 +801,21 @@ function DashboardPage() {
                         <XCircle className="h-3 w-3 mr-1" /> Excluir
                       </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
-                      onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                    >
-                      {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
-                    </Button>
+                    {isAdmin && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
+                        onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                      >
+                        {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
           </TabsContent>
-        )}
 
         <TabsContent value="upload" className="mt-6">
           {!isAdmin && (
