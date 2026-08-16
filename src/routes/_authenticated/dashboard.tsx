@@ -114,7 +114,7 @@ function DashboardPage() {
   const deleteResellerFn = useServerFn(deleteReseller);
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "" });
+  const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "", credits: 0 });
   const [transferData, setTransferData] = useState({ resellerId: "", amount: 1 });
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [showResellerPassword, setShowResellerPassword] = useState(false);
@@ -204,7 +204,7 @@ function DashboardPage() {
     try {
       await createResellerFn({ data: resellerForm });
       toast.success("Revendedor cadastrado com sucesso!");
-      setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "" });
+      setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "", credits: 0 });
       setShowResellerPassword(false);
       setIsResellerModalOpen(false);
       await resellersQuery.refetch();
@@ -546,11 +546,11 @@ function DashboardPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Telefone (Login)</Label>
+                      <Label>Número de Acesso (Login)</Label>
                       <Input 
                         value={resellerForm.phone}
-                        onChange={e => setResellerForm({...resellerForm, phone: e.target.value})}
-                        placeholder="DDD + Número" 
+                        onChange={e => setResellerForm({...resellerForm, phone: e.target.value.replace(/\D/g, "")})}
+                        placeholder="ex: 11999998888" 
                         required 
                         className="bg-[#0F172A] border-white/10"
                       />
@@ -600,11 +600,21 @@ function DashboardPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>WhatsApp (Suporte)</Label>
+                      <Label>WhatsApp de Suporte (Opcional)</Label>
                       <Input 
                         value={resellerForm.whatsapp}
                         onChange={e => setResellerForm({...resellerForm, whatsapp: e.target.value})}
                         placeholder="Ex: 5511999998888" 
+                        className="bg-[#0F172A] border-white/10"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Créditos Iniciais</Label>
+                      <Input 
+                        type="number"
+                        min="0"
+                        value={resellerForm.credits}
+                        onChange={e => setResellerForm({...resellerForm, credits: parseInt(e.target.value) || 0})}
                         className="bg-[#0F172A] border-white/10"
                       />
                     </div>
