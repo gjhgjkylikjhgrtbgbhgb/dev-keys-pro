@@ -132,8 +132,8 @@ function DashboardPage() {
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
   const MASTER_PHONE = '11921009176';
-  const phoneNormalized = (currentUser?.phone || '').replace(/\D/g, '');
-  const isMasterAdmin = phoneNormalized.includes(MASTER_PHONE) || currentUser?.is_admin === true;
+  const phoneRaw = (currentUser?.phone || context.user?.phone || context.user?.user_metadata?.phone || (context.user?.email || "").split("@")[0] || "").replace(/\D/g, "");
+  const isMasterAdmin = phoneRaw.includes(MASTER_PHONE) || currentUser?.is_admin === true;
   const isAdmin = isMasterAdmin;
   const isSubAdmin = false;
 
