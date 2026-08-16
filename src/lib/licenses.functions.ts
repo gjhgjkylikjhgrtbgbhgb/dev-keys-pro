@@ -109,21 +109,42 @@ export const createReseller = createServerFn({ method: "POST" })
   }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { phone, password, full_name } = data;
+    const { phone, password, full_name, whatsapp } = data;
+
+    if (!phone || !password || !full_name) {
+      throw new Error("Campos obrigatórios ausentes");
+    }
 
     let normalizedPhone = phone.trim();
     if (!normalizedPhone.startsWith("+")) {
       normalizedPhone = `+55${normalizedPhone.replace(/\D/g, "")}`;
     }
 
+    // Tenta encontrar se já existe para dar erro amigável
+    const { data: existingProfiles } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("phone", normalizedPhone)
+      .maybeSingle();
+
+    if (existingProfiles) {
+      throw new Error("Já existe um revendedor com este telefone");
+    }
+
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       phone: normalizedPhone,
       password: password,
       phone_confirm: true,
-      user_metadata: { full_name }
+      user_metadata: { full_name, whatsapp }
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      if (authError.message.includes("already registered")) {
+        throw new Error("Este telefone já está registrado no sistema");
+      }
+      throw authError;
+    }
+
 
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")

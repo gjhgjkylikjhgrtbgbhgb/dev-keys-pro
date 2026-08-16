@@ -26,8 +26,10 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { 
   Copy, Upload, CheckCircle2, XCircle, Clock, Database, 
-  Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare, ShieldAlert
+  Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare, ShieldAlert,
+  RefreshCw, Eye, EyeOff
 } from "lucide-react";
+
 import { format } from "date-fns";
 import { queryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -113,6 +115,9 @@ function DashboardPage() {
   const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "" });
   const [transferData, setTransferData] = useState({ resellerId: "", amount: 1 });
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [showResellerPassword, setShowResellerPassword] = useState(false);
+  const [isCreatingReseller, setIsCreatingReseller] = useState(false);
+
 
   // Fallback data para evitar quebras se a query retornar undefined/null
   const stats = statsQuery.data || { total: 0, active: 0 };
@@ -190,15 +195,40 @@ function DashboardPage() {
 
   const handleCreateReseller = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCreatingReseller) return;
+    
+    setIsCreatingReseller(true);
     try {
       await createResellerFn({ data: resellerForm });
-      toast.success("Revendedor cadastrado!");
+      toast.success("Revendedor cadastrado com sucesso!");
       setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "" });
+      setShowResellerPassword(false);
       await resellersQuery.refetch();
-    } catch (error) {
-      toast.error("Erro ao cadastrar revendedor.");
+    } catch (error: any) {
+      console.error("Erro ao cadastrar revendedor:", error);
+      toast.error(error.message || "Erro ao cadastrar revendedor.");
+    } finally {
+      setIsCreatingReseller(false);
     }
   };
+
+  const generateRandomPassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let password = "";
+    const length = Math.floor(Math.random() * 3) + 8; // 8-10 caracteres
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setResellerForm({ ...resellerForm, password });
+    toast.info("Senha gerada!");
+  };
+
+  const copyPassword = () => {
+    if (!resellerForm.password) return;
+    navigator.clipboard.writeText(resellerForm.password);
+    toast.success("Senha copiada!");
+  };
+
 
   const handleToggleBlock = async (userId: string, currentStatus: boolean) => {
     try {
@@ -267,7 +297,7 @@ function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8 space-y-8 dark">
+    <div className="min-h-screen bg-[#0F172A] text-[#F8FAFC] p-4 md:p-8 space-y-8 dark">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
@@ -284,7 +314,8 @@ function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {isAdmin && (
-          <Card className="bg-card border-border">
+          <Card className="bg-[#1E293B] border-white/5">
+
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Estoque Geral</CardTitle>
               <Database className="h-4 w-4 text-muted-foreground" />
@@ -295,7 +326,8 @@ function DashboardPage() {
             </CardContent>
           </Card>
         )}
-        <Card className="bg-card border-border">
+        <Card className="bg-[#1E293B] border-white/5">
+
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Meus Créditos</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -306,7 +338,8 @@ function DashboardPage() {
           </CardContent>
         </Card>
         {isAdmin && (
-          <Card className="bg-card border-border">
+          <Card className="bg-[#1E293B] border-white/5">
+
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Revendedores</CardTitle>
               <Users className="h-4 w-4 text-blue-500" />
@@ -358,7 +391,7 @@ function DashboardPage() {
         </TabsList>
 
         <TabsContent value="licenses" className="mt-6">
-          <Card className="bg-card border-border">
+          <Card className="bg-[#1E293B] border-white/5">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Estoque de Licenças</CardTitle>
@@ -375,8 +408,9 @@ function DashboardPage() {
                 {isProcessing ? "Apagando..." : "Apagar Licenças Usadas"}
               </Button>
             </CardHeader>
-            <CardContent>
-              <Table>
+            <CardContent className="p-0 sm:p-6 overflow-x-auto">
+              <Table className="min-w-[600px]">
+
                 <TableHeader>
                   <TableRow>
                     <TableHead>Chave</TableHead>
@@ -431,7 +465,7 @@ function DashboardPage() {
         {isAdmin && (
           <TabsContent value="resellers" className="mt-6 space-y-6">
             <div className="grid gap-6 lg:grid-cols-3">
-              <Card className="lg:col-span-1 h-fit">
+              <Card className="lg:col-span-1 h-fit bg-[#1E293B] border-white/5">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <UserPlus className="h-5 w-5" /> Novo Revendedor
@@ -458,13 +492,48 @@ function DashboardPage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Senha Inicial</Label>
-                      <Input 
-                        type="password"
-                        value={resellerForm.password}
-                        onChange={e => setResellerForm({...resellerForm, password: e.target.value})}
-                        required 
-                      />
+                      <div className="relative">
+                        <Input 
+                          type={showResellerPassword ? "text" : "password"}
+                          value={resellerForm.password}
+                          onChange={e => setResellerForm({...resellerForm, password: e.target.value})}
+                          required 
+                        />
+                        <div className="absolute right-0 top-0 h-full flex items-center pr-2 gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 hover:bg-transparent"
+                            onClick={() => setShowResellerPassword(!showResellerPassword)}
+                          >
+                            {showResellerPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          size="sm" 
+                          className="text-[10px] h-7 px-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400"
+                          onClick={generateRandomPassword}
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" /> Gerar
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          size="sm" 
+                          className="text-[10px] h-7 px-2 bg-green-500/10 hover:bg-green-500/20 text-green-400"
+                          onClick={copyPassword}
+                          disabled={!resellerForm.password}
+                        >
+                          <Copy className="h-3 w-3 mr-1" /> Copiar
+                        </Button>
+                      </div>
                     </div>
+
                       <div className="space-y-2">
                         <Label>WhatsApp (Suporte)</Label>
                         <Input 
@@ -473,17 +542,21 @@ function DashboardPage() {
                           placeholder="Ex: 5511999999999" 
                         />
                       </div>
-                      <Button type="submit" className="w-full">Cadastrar</Button>
+                      <Button type="submit" className="w-full" disabled={isCreatingReseller}>
+                        {isCreatingReseller ? "Cadastrando..." : "Cadastrar"}
+                      </Button>
+
                   </form>
                 </CardContent>
               </Card>
 
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-2 bg-[#1E293B] border-white/5">
                 <CardHeader>
                   <CardTitle>Gestão de Acessos</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <Table>
+                <CardContent className="p-0 sm:p-6 overflow-x-auto">
+                  <Table className="min-w-[650px]">
+
                     <TableHeader>
                       <TableRow>
                         <TableHead>Revendedor</TableHead>
