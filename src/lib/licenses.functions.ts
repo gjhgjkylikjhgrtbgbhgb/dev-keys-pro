@@ -82,12 +82,12 @@ export const getResellers = createServerFn({ method: "GET" })
     
     const MASTER_PHONE = "+5511921009176";
     
-    const { data: profiles, error } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .neq("phone", MASTER_PHONE);
 
-    if (error) throw error;
+    if (profileError) throw profileError;
     
     // Filtramos apenas aqueles que têm a role 'reseller' no user_roles
     const { data: roles } = await supabase
@@ -98,9 +98,6 @@ export const getResellers = createServerFn({ method: "GET" })
     const resellerIds = new Set((roles || []).map(r => r.user_id));
     
     return (profiles || []).filter(p => resellerIds.has(p.id));
-
-    if (error) throw error;
-    return data || [];
   });
 
 export const deleteReseller = createServerFn({ method: "POST" })
