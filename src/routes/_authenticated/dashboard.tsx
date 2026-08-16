@@ -594,14 +594,8 @@ function DashboardPage() {
           <TabsTrigger value="resellers" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Revendedores</TabsTrigger>
           {isAdmin && (
             <>
-              <TabsTrigger value="unassigned" className="px-6 py-2 flex items-center gap-2">
-                <Cloud className="h-4 w-4" />
-                {isMaster ? "Configs Livres" : "Minhas Livres"}
-                <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-none px-1.5 py-0 h-5">
-                  {stats.unassigned}
-                </Badge>
-              </TabsTrigger>
               {isMaster && <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>}
+
             </>
           )}
         </TabsList>
