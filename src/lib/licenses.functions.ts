@@ -29,12 +29,37 @@ export const getLicenseStats = createServerFn({ method: "GET" })
 export const getLicenses = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase } = context;
-    const { data, error } = await supabase
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autorizado");
+
+    const MASTER_PHONE = "11921009176";
+    const identifiers = [
+      user.phone || "",
+      (user.user_metadata as any)?.phone || "",
+      (user.email || "").split("@")[0] || "",
+    ].map(v => String(v).replace(/\D/g, ""));
+    const isMaster = identifiers.includes(MASTER_PHONE);
+
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    let query = supabaseAdmin
       .from("licenses")
       .select("*")
       .order("created_at", { ascending: false });
 
+    // Master vê tudo; qualquer outro usuário (sub-admin ou revendedor) vê apenas as suas
+    if (!isMaster) {
+      query = query.eq("owner_id", user.id);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     const licenses = data || [];
 
@@ -42,18 +67,21 @@ export const getLicenses = createServerFn({ method: "GET" })
     let ownersMap = new Map<string, { full_name: string | null }>();
 
     if (ownerIds.length > 0) {
-      const { data: owners } = await supabase
+      const { data: owners } = await supabaseAdmin
         .from("profiles")
         .select("id, full_name")
         .in("id", ownerIds);
       ownersMap = new Map((owners || []).map(o => [o.id, { full_name: o.full_name }]));
     }
 
+    void profile;
+
     return licenses.map(l => ({
       ...l,
       owner: l.owner_id ? ownersMap.get(l.owner_id) ?? null : null,
     }));
   });
+
 
 export const createLicenses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
