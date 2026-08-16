@@ -131,9 +131,10 @@ function DashboardPage() {
   // Pegar dados do contexto da rota carregados no loader
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
-  const isMasterAdmin = (currentUser?.phone || "").replace(/\D/g, "") === "11921009176" || currentUser?.is_admin === true;
-  const isAdmin = isMasterAdmin;
-  const isMaster = isMasterAdmin;
+  const MASTER_PHONE = '11921009176';
+  const isMaster = currentUser?.phone?.replace(/\D/g, '') === MASTER_PHONE || currentUser?.is_admin === true;
+  const isMasterAdmin = isMaster;
+  const isAdmin = isMaster;
   const isSubAdmin = false;
 
 
@@ -640,8 +641,8 @@ function DashboardPage() {
                 <Table className="min-w-[600px]">
                   <TableHeader>
                     <TableRow className="border-white/5">
-                      <TableHead>Chave</TableHead>
-                      <TableHead>Arquivo</TableHead>
+                      <TableHead>Chave / Código</TableHead>
+                      <TableHead>Identificador</TableHead>
                       {isMasterAdmin && <TableHead>Dono</TableHead>}
                       <TableHead>Usos</TableHead>
                       <TableHead>Status</TableHead>
@@ -658,25 +659,35 @@ function DashboardPage() {
                       </TableRow>
                     ) : licenses.map((license: any) => (
                       <TableRow key={license.id} className="border-white/5">
-                        <TableCell className="font-mono font-bold">{license.key}</TableCell>
-                        <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
+                        <TableCell className="font-mono font-bold text-sm tracking-wider">
+                          {license.key}
+                        </TableCell>
+                        <TableCell className="max-w-[150px] truncate text-slate-400">
+                          {license.filename}
+                        </TableCell>
                         {isMasterAdmin && (
                           <TableCell>
-                            {license.owner?.full_name || <Badge variant="outline">Livre</Badge>}
+                            {license.owner?.full_name || <Badge variant="outline" className="opacity-50">Livre</Badge>}
                           </TableCell>
                         )}
-                        <TableCell>{license.uses_remaining}/3</TableCell>
+                        <TableCell className="text-slate-300">{license.uses_remaining}/3</TableCell>
                         <TableCell>
-                          <Badge variant={licenseStatusVariant(license)}>
+                          <Badge variant={licenseStatusVariant(license)} className="font-medium">
                             {licenseStatusLabel(license)}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-[10px] text-muted-foreground">
                           {format(new Date(license.created_at), "dd/MM HH:mm")}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => copyToClipboard(license.key)}>
-                            <Copy className="h-4 w-4" />
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="bg-slate-800 hover:bg-slate-700 active:scale-95 transition-all gap-2"
+                            onClick={() => copyToClipboard(license.key)}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>Copiar</span>
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -692,30 +703,41 @@ function DashboardPage() {
                     Nenhuma licença encontrada.
                   </div>
                 ) : licenses.map((license: any) => (
-                  <Card key={license.id} className="bg-[#0F172A] border-white/5 overflow-hidden">
-                    <CardHeader className="p-4 pb-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-mono font-bold text-lg">{license.key}</span>
-                        <Badge variant={licenseStatusVariant(license)}>
-                          {licenseStatusLabel(license)}
-                        </Badge>
+                  <Card key={license.id} className="bg-slate-800/60 border-slate-700/50 rounded-xl overflow-hidden p-4 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-1 max-w-[70%]">
+                        <span className="font-mono font-bold text-sm break-all tracking-wide text-blue-400">
+                          {license.key}
+                        </span>
+                        <span className="text-[10px] text-slate-400 truncate">
+                          {license.filename}
+                        </span>
                       </div>
-                      <CardDescription className="truncate text-xs">{license.filename}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-2 space-y-2">
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <Badge variant={licenseStatusVariant(license)} className="text-[10px] py-0 h-5">
+                        {licenseStatusLabel(license)}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-white/5">
+                      <div className="flex gap-3">
                         <span>Usos: {license.uses_remaining}/3</span>
-                        <span>{format(new Date(license.created_at), "dd/MM HH:mm")}</span>
+                        {isMasterAdmin && (
+                          <span className="text-blue-500/70">
+                            Dono: {license.owner?.full_name || "Estoque"}
+                          </span>
+                        )}
                       </div>
-                      {isMasterAdmin && (
-                        <div className="text-xs">
-                          Dono: {license.owner?.full_name || "Livre"}
-                        </div>
-                      )}
-                      <Button variant="secondary" size="sm" className="w-full mt-2" onClick={() => copyToClipboard(license.key)}>
-                        <Copy className="h-4 w-4 mr-2" /> Copiar Chave
-                      </Button>
-                    </CardContent>
+                      <span>{format(new Date(license.created_at), "dd/MM HH:mm")}</span>
+                    </div>
+
+                    <Button 
+                      variant="default" 
+                      className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold transition-all flex items-center justify-center gap-2 rounded-lg"
+                      onClick={() => copyToClipboard(license.key)}
+                    >
+                      <Copy className="h-4 w-4" />
+                      <span>Copiar Chave</span>
+                    </Button>
                   </Card>
                 ))}
               </div>
