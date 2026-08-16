@@ -1080,7 +1080,7 @@ function DashboardPage() {
               <p>Apenas o administrador master pode gerar novas licenças no sistema.</p>
             </div>
           )}
-          <Card className={`bg-card border-border ${!isAdmin ? 'opacity-50 pointer-events-none' : ''}`}>
+          <Card className={`bg-card border-border ${!isMaster ? 'opacity-50 pointer-events-none' : ''}`}>
             <CardHeader>
               <CardTitle>Upload em Lote</CardTitle>
               <CardDescription>Apenas o Admin Master pode gerar novas licenças para o estoque geral.</CardDescription>
