@@ -545,7 +545,14 @@ function DashboardPage() {
         )}
 
         <TabsContent value="upload" className="mt-6">
-          <Card className="bg-card border-border">
+          {!isAdmin && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center mb-6">
+              <ShieldAlert className="mx-auto h-12 w-12 mb-4" />
+              <h2 className="text-xl font-bold">Acesso Restrito</h2>
+              <p>Apenas administradores podem gerar novas licenças no sistema.</p>
+            </div>
+          )}
+          <Card className={`bg-card border-border ${!isAdmin ? 'opacity-50 pointer-events-none' : ''}`}>
             <CardHeader>
               <CardTitle>Upload em Lote</CardTitle>
               <CardDescription>Apenas o Admin Master pode gerar novas licenças para o estoque geral.</CardDescription>
