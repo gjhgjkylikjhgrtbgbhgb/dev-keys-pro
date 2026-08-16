@@ -247,6 +247,10 @@ function DashboardPage() {
 
   const handleTransfer = async () => {
     try {
+      if (!isAdmin && currentUser?.credits < transferData.amount) {
+        toast.error("Saldo de créditos insuficiente!");
+        return;
+      }
       await transferFn({ data: transferData });
       toast.success("Licenças transferidas!");
       setIsTransferOpen(false);
