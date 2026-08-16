@@ -583,9 +583,9 @@ function DashboardPage() {
           <Card className="bg-[#1E293B] border-white/5">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>{isAdmin ? "Estoque de Licenças" : "Minhas Chaves de Licença"}</CardTitle>
+                <CardTitle>{isMasterAdmin ? "Estoque de Licenças" : "Minhas Chaves de Licença"}</CardTitle>
                 <CardDescription>
-                  {isAdmin
+                  {isMasterAdmin
                     ? "Gerencie suas licenças e remova as já esgotadas."
                     : "Copie suas chaves e acompanhe o status de cada uma."}
                 </CardDescription>
