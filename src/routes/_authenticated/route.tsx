@@ -10,10 +10,37 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) {
       throw redirect({ to: "/auth" });
     }
-    return { user: data.user };
+    
+    // Identificação imediata do Master Admin no loader para evitar flicker
+    const MASTER_PHONE = "11921009176";
+    const userPhone = (data.user as any).phone?.replace(/\D/g, "") || "";
+    const isActuallyMaster = userPhone === MASTER_PHONE || 
+                            (data.user as any).user_metadata?.phone?.replace(/\D/g, "") === MASTER_PHONE;
+
+    // Buscar perfil e roles antecipadamente
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+
+    const isAdmin = isActuallyMaster || roleData?.role === "admin" || !!(profile as any)?.is_admin;
+
+    return { 
+      user: data.user,
+      profile,
+      isAdmin
+    };
   },
   component: AuthenticatedLayout,
 });
+
 
 function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();

@@ -93,8 +93,9 @@ function DashboardPage() {
   const licensesQuery = useSuspenseQuery(licensesQueryOptions);
   const resellersQuery = useSuspenseQuery(resellersQueryOptions);
   
-  // Pegar dados do layout pai (_authenticated/route.tsx)
+  // Pegar dados do contexto da rota (via useRouteContext ou loader context)
   const { profile: currentUser, isAdmin } = Route.useRouteContext() as any;
+
 
   const updateLastSeenFn = useServerFn(updateLastSeen);
 
