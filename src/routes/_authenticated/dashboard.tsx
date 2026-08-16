@@ -597,16 +597,33 @@ function DashboardPage() {
                     : "Copie suas chaves e acompanhe o status de cada uma."}
                 </CardDescription>
               </div>
-              <Button 
-                variant="destructive" 
-                size="sm" 
-                onClick={handleDeleteExhausted}
-                disabled={isProcessing}
-                type="button"
-              >
-                <XCircle className="h-4 w-4 mr-2" /> 
-                {isProcessing ? "Apagando..." : "Apagar Licenças Usadas"}
-              </Button>
+              <div className="flex items-center gap-2">
+                {isMaster && (
+                  <div {...getRootProps()} className="cursor-pointer">
+                    <input {...getInputProps()} />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white border-none"
+                      disabled={isProcessing}
+                      type="button"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      {isProcessing ? "Enviando..." : "Upload Configs"}
+                    </Button>
+                  </div>
+                )}
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={handleDeleteExhausted}
+                  disabled={isProcessing}
+                  type="button"
+                >
+                  <XCircle className="h-4 w-4 mr-2" /> 
+                  {isProcessing ? "Apagando..." : "Apagar Licenças Usadas"}
+                </Button>
+              </div>
             </CardHeader>
 
             <CardContent className="p-0 sm:p-6 overflow-x-auto">
