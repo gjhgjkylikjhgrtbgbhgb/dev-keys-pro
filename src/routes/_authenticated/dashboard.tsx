@@ -618,7 +618,7 @@ function DashboardPage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {(isAdmin || currentUser?.can_upload) && (
+                {(isMaster || (currentUser?.can_upload !== false)) && (
                   <>
                     <input
                       type="file"
