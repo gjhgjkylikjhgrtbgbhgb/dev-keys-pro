@@ -210,9 +210,9 @@ export const createReseller = createServerFn({ method: "POST" })
         credits: 0,
         is_blocked: false,
         is_admin: false,
-        support_whatsapp: data.whatsapp || "",
+        support_whatsapp: whatsapp || "",
         last_seen: new Date().toISOString()
-      }, { onConflict: 'id' });
+      } as any, { onConflict: 'id' });
 
     if (profileError) throw profileError;
 
