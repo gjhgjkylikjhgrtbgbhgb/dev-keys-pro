@@ -7,7 +7,10 @@ import {
   getResellers, 
   createReseller, 
   updateProfileStatus, 
-  transferLicenses 
+  transferLicenses,
+  toggleAdminStatus,
+  updateLastSeen,
+  deleteExhaustedLicenses
 } from "@/lib/licenses.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -94,10 +97,14 @@ function DashboardPage() {
   const createResellerFn = useServerFn(createReseller);
   const updateStatusFn = useServerFn(updateProfileStatus);
   const transferFn = useServerFn(transferLicenses);
+  const toggleAdminFn = useServerFn(toggleAdminStatus);
+  const updateLastSeenFn = useServerFn(updateLastSeen);
+  const deleteExhaustedFn = useServerFn(deleteExhaustedLicenses);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "" });
+  const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "" });
   const [transferData, setTransferData] = useState({ resellerId: "", amount: 1 });
   const [isTransferOpen, setIsTransferOpen] = useState(false);
 
@@ -108,17 +115,29 @@ function DashboardPage() {
 
   // Verificar se o usuário é admin
   useSuspenseQuery({
-    queryKey: ["is-admin"],
+    queryKey: ["current-user-data"],
     queryFn: async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          const { data } = await supabase
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .maybeSingle();
+            
+          setCurrentUser(profile);
+          
+          const { data: roleData } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
             .maybeSingle();
-          setIsAdmin(data?.role === "admin");
+            
+          setIsAdmin(roleData?.role === "admin" || !!(profile as any)?.is_admin);
+          
+          // Atualiza last_seen
+          updateLastSeenFn();
         }
       } catch (err) {
         console.error("Erro ao verificar admin:", err);
