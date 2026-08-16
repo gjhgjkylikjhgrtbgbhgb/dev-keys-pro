@@ -13,8 +13,7 @@ export const Route = createFileRoute("/_authenticated")({
     // Identificação imediata do Master Admin no loader para evitar flicker
     const MASTER_PHONE = "11921009176";
     const userPhone = (data.user as any).phone?.replace(/\D/g, "") || "";
-    const isActuallyMaster = userPhone === MASTER_PHONE || 
-                            (data.user as any).user_metadata?.phone?.replace(/\D/g, "") === MASTER_PHONE;
+    const isMaster = userPhone === MASTER_PHONE;
 
     // Buscar perfil e roles antecipadamente
     const { data: profile } = await supabase
@@ -29,12 +28,13 @@ export const Route = createFileRoute("/_authenticated")({
       .eq("user_id", data.user.id)
       .maybeSingle();
 
-    const isAdmin = isActuallyMaster || roleData?.role === "admin" || !!(profile as any)?.is_admin;
+    const isAdmin = isMaster || roleData?.role === "admin" || !!(profile as any)?.is_admin;
 
     return { 
       user: data.user,
       profile,
-      isAdmin
+      isAdmin,
+      isMasterAdmin: isMaster
     };
   },
   component: AuthenticatedLayout,

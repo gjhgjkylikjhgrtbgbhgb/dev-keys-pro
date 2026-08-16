@@ -131,9 +131,11 @@ function DashboardPage() {
   // Pegar dados do contexto da rota carregados no loader
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
-  const isAdmin = context.isAdmin;
-  const isMaster = (currentUser?.phone || "").replace(/\D/g, "") === "11921009176";
-  const isSubAdmin = !isMaster && isAdmin;
+  const isMasterAdmin = (currentUser?.phone || "").replace(/\D/g, "") === "11921009176" || currentUser?.is_admin === true;
+  const isAdmin = isMasterAdmin;
+  const isMaster = isMasterAdmin;
+  const isSubAdmin = false;
+
 
 
 
@@ -250,8 +252,7 @@ function DashboardPage() {
       const cleanLogin = resellerForm.phone.replace(/\D/g, '');
       if (!cleanLogin) throw new Error("Número de telefone inválido.");
 
-      const isSubAdmin = currentUser?.is_admin || false;
-      const parentIdValue = isSubAdmin ? currentUser.id : null;
+      const parentIdValue = null;
 
       const payload = {
         ...resellerForm,
@@ -311,7 +312,7 @@ function DashboardPage() {
 
   const handleTransfer = async () => {
     try {
-      if (!isAdmin && currentUser?.credits < transferData.amount) {
+      if (!isMasterAdmin && currentUser?.credits < transferData.amount) {
         toast.error("Saldo de créditos insuficiente!");
         return;
       }
@@ -324,15 +325,6 @@ function DashboardPage() {
     }
   };
 
-  const handleToggleAdmin = async (userId: string, currentAdmin: boolean) => {
-    try {
-      await toggleAdminFn({ data: { userId, isAdmin: !currentAdmin } });
-      toast.success(!currentAdmin ? "Promovido a Admin!" : "Removido status de Admin!");
-      await resellersQuery.refetch();
-    } catch (error) {
-      toast.error("Erro ao alterar privilégios.");
-    }
-  };
 
   const handleDeleteReseller = async (userId: string) => {
     if (!confirm("Tem certeza que deseja excluir este revendedor? Esta ação é irreversível.")) return;
@@ -355,7 +347,7 @@ function DashboardPage() {
     
     setIsProcessing(true);
     try {
-      const { error } = await (isAdmin 
+      const { error } = await (isMasterAdmin 
         ? supabase.from("licenses").delete().or("uses_remaining.lte.0,status.eq.exhausted")
         : supabase.from("licenses").delete().eq("owner_id", currentUser?.id).or("uses_remaining.lte.0,status.eq.exhausted")
       );
@@ -449,10 +441,10 @@ function DashboardPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {isAdmin ? "Painel Administrativo" : "Painel do Revendedor"}
+            {isMasterAdmin ? "Painel Administrativo" : "Painel do Revendedor"}
           </h1>
           <p className="text-muted-foreground">
-            {isAdmin ? "Bem-vindo à gestão centralizada da rede." : `Olá, ${currentUser?.full_name || "Revendedor"}. Gerencie suas licenças.`}
+            {isMasterAdmin ? "Bem-vindo à gestão centralizada da rede." : `Olá, ${currentUser?.full_name || "Revendedor"}. Gerencie suas licenças.`}
           </p>
         </div>
         <Button variant="outline" onClick={() => supabase.auth.signOut().then(() => window.location.href = "/auth")}>
@@ -461,7 +453,7 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-        {isMaster && (
+        {isMasterAdmin && (
           <>
             <Card className="bg-[#1E293B] border-white/5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -498,31 +490,19 @@ function DashboardPage() {
           </>
         )}
         
-        {!isMaster && isSubAdmin && (
-          <>
-            <Card className="bg-[#1E293B] border-white/5">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Minhas Repassadas</CardTitle>
-                <Send className="h-4 w-4 text-blue-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.assigned}</div>
-                <p className="text-xs text-muted-foreground">Enviadas aos meus revendedores</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-[#1E293B] border-white/5">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Minhas Livres</CardTitle>
-                <Unlock className="h-4 w-4 text-green-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.unassigned}</div>
-                <p className="text-xs text-muted-foreground">Disponíveis para repasse</p>
-              </CardContent>
-            </Card>
-          </>
+        {!isMasterAdmin && (
+          <Card className="bg-[#1E293B] border-white/5">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Minhas Licenças Ativas</CardTitle>
+              <Unlock className="h-4 w-4 text-green-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.unassigned}</div>
+              <p className="text-xs text-muted-foreground">Disponíveis para uso</p>
+            </CardContent>
+          </Card>
         )}
+        
         
         <Card className="bg-[#1E293B] border-white/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -549,7 +529,7 @@ function DashboardPage() {
         </Card>
       </div>
 
-      {currentUser?.credits === 0 && !isAdmin && (
+      {currentUser?.credits === 0 && !isMasterAdmin && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center animate-pulse">
           <h2 className="text-2xl font-bold mb-2">Renove seus créditos</h2>
           <p>Você não possui licenças disponíveis em seu saldo.</p>
@@ -589,13 +569,12 @@ function DashboardPage() {
       >
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
           <TabsTrigger value="licenses" className="px-6 py-2">
-            {isMaster ? "Licenças" : isSubAdmin ? "Licenças" : "Minhas Licenças"}
+            {isMasterAdmin ? "Licenças" : "Minhas Licenças"}
           </TabsTrigger>
-          <TabsTrigger value="resellers" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Revendedores</TabsTrigger>
-          {isAdmin && (
+          {isMasterAdmin && (
             <>
-              {isMaster && <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>}
-
+              <TabsTrigger value="resellers" className="px-6 py-2">Revendedores</TabsTrigger>
+              <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
             </>
           )}
         </TabsList>
@@ -604,15 +583,15 @@ function DashboardPage() {
           <Card className="bg-[#1E293B] border-white/5">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>{isAdmin ? "Estoque de Licenças" : "Minhas Chaves de Licença"}</CardTitle>
+                <CardTitle>{isMasterAdmin ? "Estoque de Licenças" : "Minhas Chaves de Licença"}</CardTitle>
                 <CardDescription>
-                  {isAdmin
+                  {isMasterAdmin
                     ? "Gerencie suas licenças e remova as já esgotadas."
                     : "Copie suas chaves e acompanhe o status de cada uma."}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {(isMaster || (currentUser?.can_upload !== false)) && (
+                {isMasterAdmin && (
                   <>
                     <input
                       type="file"
@@ -626,19 +605,20 @@ function DashboardPage() {
                       accept=".config,.txt"
                       className="hidden"
                     />
-                    <Button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all"
-                      disabled={isProcessing}
-                    >
-                      <Upload className="w-4 h-4"/>
-                      {isProcessing ? "Enviando..." : "Upload Configs"}
-                    </Button>
-                    <p className="text-[10px] text-amber-500 mt-1 max-w-[150px]">
-                      Somente admin pode usar. Se você usar vai tudo pro painel master
-                    </p>
-
+                    <div className="flex flex-col">
+                      <Button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all"
+                        disabled={isProcessing}
+                      >
+                        <Upload className="w-4 h-4"/>
+                        {isProcessing ? "Enviando..." : "Upload Configs"}
+                      </Button>
+                      <p className="text-[10px] text-amber-500 mt-1 max-w-[150px]">
+                        Somente admin pode usar. Se você usar vai tudo pro painel master
+                      </p>
+                    </div>
                   </>
                 )}
                 <Button 
@@ -662,7 +642,7 @@ function DashboardPage() {
                     <TableRow className="border-white/5">
                       <TableHead>Chave</TableHead>
                       <TableHead>Arquivo</TableHead>
-                      {isAdmin && <TableHead>Dono</TableHead>}
+                      {isMasterAdmin && <TableHead>Dono</TableHead>}
                       <TableHead>Usos</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Data</TableHead>
@@ -672,7 +652,7 @@ function DashboardPage() {
                   <TableBody>
                     {licenses.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={isMasterAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
                           Nenhuma licença encontrada.
                         </TableCell>
                       </TableRow>
@@ -680,7 +660,7 @@ function DashboardPage() {
                       <TableRow key={license.id} className="border-white/5">
                         <TableCell className="font-mono font-bold">{license.key}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
-                        {isAdmin && (
+                        {isMasterAdmin && (
                           <TableCell>
                             {license.owner?.full_name || <Badge variant="outline">Livre</Badge>}
                           </TableCell>
@@ -727,7 +707,7 @@ function DashboardPage() {
                         <span>Usos: {license.uses_remaining}/3</span>
                         <span>{format(new Date(license.created_at), "dd/MM HH:mm")}</span>
                       </div>
-                      {isAdmin && (
+                      {isMasterAdmin && (
                         <div className="text-xs">
                           Dono: {license.owner?.full_name || "Livre"}
                         </div>
@@ -898,9 +878,6 @@ function DashboardPage() {
                               ) : (
                                 <Badge variant="default" className="bg-green-500/10 text-green-400">Ativo</Badge>
                               )}
-                              {reseller.is_admin && (
-                                <Badge variant="outline" className="text-[10px] h-4 border-blue-500/30 text-blue-400">Sub-Admin</Badge>
-                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -920,7 +897,7 @@ function DashboardPage() {
                             >
                               <Send className="h-3 w-3 mr-1" /> Créditos
                             </Button>
-                            {isMaster && (
+                            {isMasterAdmin && (
                               <>
                                 <Button 
                                   variant="outline" 
@@ -932,24 +909,6 @@ function DashboardPage() {
                                   {reseller.can_upload ? <Lock className="h-3 w-3 mr-1" /> : <Unlock className="h-3 w-3 mr-1" />}
                                   {reseller.can_upload ? "Bloquear" : "Liberar"}
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="border-white/10 text-blue-400 hover:text-blue-300"
-                                  onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                                >
-                                  <ShieldAlert className="h-3 w-3 mr-1" />
-                                  {reseller.is_admin ? "Remover Sub" : "Tornar Sub"}
-                                </Button>
-                                {isMaster && (
-                                  <Button 
-                                    onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                                    className="w-full py-2 bg-purple-600 text-white rounded text-xs"
-                                  >
-                                    {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
-                                  </Button>
-                                )}
-
                               </>
                             )}
                             <Button 
@@ -998,9 +957,6 @@ function DashboardPage() {
                           <Badge variant="destructive">Bloqueado</Badge>
                         ) : (
                           <Badge variant="default" className="bg-green-500/10 text-green-400">Ativo</Badge>
-                        )}
-                        {reseller.is_admin && (
-                          <Badge variant="outline" className="text-[10px] h-4 border-blue-500/30 text-blue-400">Sub-Admin</Badge>
                         )}
                       </div>
                     </div>
@@ -1062,24 +1018,6 @@ function DashboardPage() {
                         <XCircle className="h-3 w-3 mr-1" /> Excluir
                       </Button>
                     </div>
-                    {isMaster && (
-                      <div className="flex flex-col gap-2 pt-2 border-t border-white/5 mt-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
-                          onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                        >
-                          {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
-                        </Button>
-                        <Button 
-                          onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                          className="w-full py-2 bg-purple-600 text-white rounded text-xs mt-2"
-                        >
-                          {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
-                        </Button>
-                      </div>
-                    )}
 
                   </CardContent>
                 </Card>
@@ -1091,9 +1029,9 @@ function DashboardPage() {
           <Card className="bg-[#1E293B] border-white/5">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>{isMaster ? "Estoque de Configs Livres" : "Minhas Configs Livres"}</CardTitle>
+                <CardTitle>{isMasterAdmin ? "Estoque de Configs Livres" : "Minhas Configs Livres"}</CardTitle>
                 <CardDescription>
-                  {isMaster ? "Visualizar e atribuir licenças que ainda não possuem dono." : "Gerencie licenças prontas para repasse aos seus revendedores."}
+                  {isMasterAdmin ? "Visualizar e atribuir licenças que ainda não possuem dono." : "Gerencie licenças prontas para repasse aos seus revendedores."}
                 </CardDescription>
               </div>
               <div className="w-full sm:w-64">
@@ -1167,7 +1105,7 @@ function DashboardPage() {
           </Card>
         </TabsContent>
 
-        {isMaster && (
+        {isMasterAdmin && (
           <TabsContent value="upload" className="mt-6">
             <Card className="bg-[#1E293B] border-white/5">
               <CardHeader>

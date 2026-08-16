@@ -46,20 +46,15 @@ export const getLicenseStats = createServerFn({ method: "GET" })
       activeCount = active || 0;
       assignedCount = assigned || 0;
       unassignedCount = unassigned || 0;
-    } else if (isAdmin) {
-      // Sub-Admin vê apenas o que é dele ou de seus revendedores
-      // 1. Configs Livres dele
+    } else {
+      // Revendedor vê apenas suas licenças ativas como "estoque livre" para ele
       const { count: unassigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).eq("owner_id", user.id).eq("status", "active");
       unassignedCount = unassigned || 0;
-
-      // 2. Licenças Repassadas (estão com revendedores que ele cadastrou)
-      const { data: myResellers } = await supabaseAdmin.from("profiles").select("id").eq("parent_id", user.id);
-      const resellerIds = (myResellers || []).map(r => r.id);
       
-      if (resellerIds.length > 0) {
-        const { count: assigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).in("owner_id", resellerIds);
-        assignedCount = assigned || 0;
-      }
+      // Revendedores comuns não vêem métricas globais
+      totalCount = 0;
+      activeCount = 0;
+      assignedCount = 0;
     }
 
     return {
@@ -516,14 +511,11 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
     let query = supabaseAdmin.from("licenses").select("*").order("created_at", { ascending: false });
 
     if (isMaster) {
-      // Master Admin: busca licenças sem dono ou com status de estoque livre
-      // Garantimos que 'owner_id is null' capture o estoque global
-      query = query.or('owner_id.is.null,status.eq.livre,status.eq.disponivel,status.eq.available,status.eq.active');
+      // Master Admin: busca licenças globais sem dono
+      query = query.is('owner_id', null).eq('status', 'active');
     } else {
-      // Sub-Admin: busca configs atribuídas a ele que ainda estão livres para repassar
-      query = query
-        .eq('owner_id', user.id)
-        .or('status.eq.livre,status.eq.disponivel,status.eq.available,status.eq.active');
+      // Revendedor comum não deve chegar aqui pelo frontend, mas se chegar, vê o estoque dele
+      query = query.eq('owner_id', user.id).eq('status', 'active');
     }
 
     const { data, error } = await query;
