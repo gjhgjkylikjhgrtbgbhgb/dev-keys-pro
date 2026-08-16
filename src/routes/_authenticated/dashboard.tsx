@@ -996,8 +996,10 @@ function DashboardPage() {
           <Card className="bg-[#1E293B] border-white/5">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>Estoque de Configs Livres</CardTitle>
-                <CardDescription>Visualizar e atribuir licenças que ainda não possuem dono.</CardDescription>
+                <CardTitle>{isMaster ? "Estoque de Configs Livres" : "Minhas Configs Livres"}</CardTitle>
+                <CardDescription>
+                  {isMaster ? "Visualizar e atribuir licenças que ainda não possuem dono." : "Gerencie licenças prontas para repasse aos seus revendedores."}
+                </CardDescription>
               </div>
               <div className="w-full sm:w-64">
                 <Input
@@ -1071,11 +1073,11 @@ function DashboardPage() {
         </TabsContent>
 
         <TabsContent value="upload" className="mt-6">
-          {!isAdmin && (
+          {!isMaster && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center mb-6">
               <ShieldAlert className="mx-auto h-12 w-12 mb-4" />
               <h2 className="text-xl font-bold">Acesso Restrito</h2>
-              <p>Apenas administradores podem gerar novas licenças no sistema.</p>
+              <p>Apenas o administrador master pode gerar novas licenças no sistema.</p>
             </div>
           )}
           <Card className={`bg-card border-border ${!isAdmin ? 'opacity-50 pointer-events-none' : ''}`}>
