@@ -1115,7 +1115,7 @@ function DashboardPage() {
                       <TableCell className="max-w-[200px] truncate">{license.filename}</TableCell>
                       <TableCell>
                         <Badge variant="default" className="bg-green-500/10 text-green-400">
-                          Sem Dono
+                          Livre
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
