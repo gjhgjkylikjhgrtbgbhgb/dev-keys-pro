@@ -312,7 +312,7 @@ function DashboardPage() {
 
   const handleTransfer = async () => {
     try {
-      if (!isAdmin && currentUser?.credits < transferData.amount) {
+      if (!isMasterAdmin && currentUser?.credits < transferData.amount) {
         toast.error("Saldo de créditos insuficiente!");
         return;
       }
