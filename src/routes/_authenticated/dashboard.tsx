@@ -166,8 +166,8 @@ function DashboardPage() {
         if (insertError) throw insertError;
 
         toast.success(`${itemsToInsert.length} licenças geradas com sucesso!`);
-        window.location.reload();
-      }
+        await licensesQuery.refetch();
+        await statsQuery.refetch();
     } catch (error: any) {
       console.error("Erro exato do upload:", error);
       const errorMsg = error?.message || "Erro desconhecido durante o upload";
@@ -193,7 +193,7 @@ function DashboardPage() {
       await createResellerFn({ data: resellerForm });
       toast.success("Revendedor cadastrado!");
       setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "" });
-      window.location.reload();
+      await resellersQuery.refetch();
     } catch (error) {
       toast.error("Erro ao cadastrar revendedor.");
     }
@@ -203,7 +203,7 @@ function DashboardPage() {
     try {
       await updateStatusFn({ data: { userId, isBlocked: !currentStatus } });
       toast.success(currentStatus ? "Desbloqueado!" : "Bloqueado!");
-      window.location.reload();
+      await resellersQuery.refetch();
     } catch (error) {
       toast.error("Erro ao alterar status.");
     }
@@ -214,7 +214,7 @@ function DashboardPage() {
       await transferFn({ data: transferData });
       toast.success("Licenças transferidas!");
       setIsTransferOpen(false);
-      window.location.reload();
+      await Promise.all([licensesQuery.refetch(), statsQuery.refetch(), resellersQuery.refetch()]);
     } catch (error: any) {
       toast.error(error.message || "Erro na transferência.");
     }
@@ -224,7 +224,7 @@ function DashboardPage() {
     try {
       await toggleAdminFn({ data: { userId, isAdmin: !currentAdmin } });
       toast.success(!currentAdmin ? "Promovido a Admin!" : "Removido status de Admin!");
-      window.location.reload();
+      await resellersQuery.refetch();
     } catch (error) {
       toast.error("Erro ao alterar privilégios.");
     }
@@ -236,6 +236,7 @@ function DashboardPage() {
       e.stopPropagation();
     }
     
+    setIsProcessing(true);
     try {
       const { error } = await (isAdmin 
         ? supabase.from("licenses").delete().or("uses_remaining.lte.0,status.eq.exhausted")
@@ -245,10 +246,12 @@ function DashboardPage() {
       if (error) throw error;
 
       toast.success("Licenças usadas removidas com sucesso!");
-      window.location.reload();
+      await Promise.all([licensesQuery.refetch(), statsQuery.refetch()]);
     } catch (error: any) {
       console.error("Erro ao deletar licenças:", error);
       toast.error(error.message || "Erro ao remover licenças.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -360,8 +363,15 @@ function DashboardPage() {
                 <CardTitle>Estoque de Licenças</CardTitle>
                 <CardDescription>Gerencie suas licenças e remova as já esgotadas.</CardDescription>
               </div>
-              <Button variant="destructive" size="sm" onClick={handleDeleteExhausted}>
-                <XCircle className="h-4 w-4 mr-2" /> Apagar Licenças Usadas
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={handleDeleteExhausted}
+                disabled={isProcessing}
+                type="button"
+              >
+                <XCircle className="h-4 w-4 mr-2" /> 
+                {isProcessing ? "Apagando..." : "Apagar Licenças Usadas"}
               </Button>
             </CardHeader>
             <CardContent>
