@@ -963,6 +963,84 @@ function DashboardPage() {
             </div>
           </TabsContent>
 
+        <TabsContent value="unassigned" className="mt-6">
+          <Card className="bg-[#1E293B] border-white/5">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle>Estoque de Configs Livres</CardTitle>
+                <CardDescription>Visualizar e atribuir licenças que ainda não possuem dono.</CardDescription>
+              </div>
+              <div className="w-full sm:w-64">
+                <Input
+                  placeholder="Buscar por chave ou nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-[#0F172A] border-white/10"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-6 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/5">
+                    <TableHead>Chave</TableHead>
+                    <TableHead>Arquivo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Importado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUnassigned.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        Nenhuma config livre encontrada.
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredUnassigned.map((license: any) => (
+                    <TableRow key={license.id} className="border-white/5">
+                      <TableCell className="font-mono font-bold">{license.key}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{license.filename}</TableCell>
+                      <TableCell>
+                        <Badge variant="default" className="bg-green-500/10 text-green-400">
+                          Sem Dono
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(license.created_at), "dd/MM HH:mm")}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(license.key)} title="Copiar Chave">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-600/30"
+                          onClick={() => {
+                            setAssignData({ ...assignData, licenseId: license.id });
+                            setIsAssignModalOpen(true);
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" /> Atribuir
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteLicense(license.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="upload" className="mt-6">
           {!isAdmin && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center mb-6">
