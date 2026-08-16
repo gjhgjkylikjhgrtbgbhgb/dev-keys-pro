@@ -402,10 +402,19 @@ function DashboardPage() {
         </div>
       )}
 
-      <Tabs defaultValue={isAdmin ? "licenses" : "resellers"} className="w-full">
+      <Tabs
+        defaultValue="licenses"
+        className="w-full"
+        onValueChange={(value) => {
+          if (value === "resellers") resellersQuery.refetch();
+          if (value === "licenses") licensesQuery.refetch();
+        }}
+      >
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
-          <TabsTrigger value="licenses" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Licenças</TabsTrigger>
-          <TabsTrigger value="resellers" className="px-6 py-2">Revendedores</TabsTrigger>
+          <TabsTrigger value="licenses" className="px-6 py-2">
+            {isAdmin ? "Licenças" : "Minhas Licenças"}
+          </TabsTrigger>
+          <TabsTrigger value="resellers" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Revendedores</TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
           )}
@@ -413,10 +422,14 @@ function DashboardPage() {
 
         <TabsContent value="licenses" className="mt-6">
           <Card className="bg-[#1E293B] border-white/5">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>Estoque de Licenças</CardTitle>
-                <CardDescription>Gerencie suas licenças e remova as já esgotadas.</CardDescription>
+                <CardTitle>{isAdmin ? "Estoque de Licenças" : "Minhas Chaves de Licença"}</CardTitle>
+                <CardDescription>
+                  {isAdmin
+                    ? "Gerencie suas licenças e remova as já esgotadas."
+                    : "Copie suas chaves e acompanhe o status de cada uma."}
+                </CardDescription>
               </div>
               <Button 
                 variant="destructive" 
@@ -429,6 +442,7 @@ function DashboardPage() {
                 {isProcessing ? "Apagando..." : "Apagar Licenças Usadas"}
               </Button>
             </CardHeader>
+
             <CardContent className="p-0 sm:p-6 overflow-x-auto">
               <div className="hidden md:block">
                 <Table className="min-w-[600px]">
