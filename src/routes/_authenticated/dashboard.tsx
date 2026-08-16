@@ -1105,7 +1105,7 @@ function DashboardPage() {
           </Card>
         </TabsContent>
 
-        {isMaster && (
+        {isMasterAdmin && (
           <TabsContent value="upload" className="mt-6">
             <Card className="bg-[#1E293B] border-white/5">
               <CardHeader>
