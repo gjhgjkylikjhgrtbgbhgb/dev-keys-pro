@@ -511,14 +511,11 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
     let query = supabaseAdmin.from("licenses").select("*").order("created_at", { ascending: false });
 
     if (isMaster) {
-      // Master Admin: busca licenças sem dono ou com status de estoque livre
-      // Garantimos que 'owner_id is null' capture o estoque global
-      query = query.or('owner_id.is.null,status.eq.livre,status.eq.disponivel,status.eq.available,status.eq.active');
+      // Master Admin: busca licenças globais sem dono
+      query = query.is('owner_id', null).eq('status', 'active');
     } else {
-      // Sub-Admin: busca configs atribuídas a ele que ainda estão livres para repassar
-      query = query
-        .eq('owner_id', user.id)
-        .or('status.eq.livre,status.eq.disponivel,status.eq.available,status.eq.active');
+      // Revendedor comum não deve chegar aqui pelo frontend, mas se chegar, vê o estoque dele
+      query = query.eq('owner_id', user.id).eq('status', 'active');
     }
 
     const { data, error } = await query;
