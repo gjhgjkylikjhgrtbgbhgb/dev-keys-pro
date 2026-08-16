@@ -1029,9 +1029,9 @@ function DashboardPage() {
           <Card className="bg-[#1E293B] border-white/5">
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <CardTitle>{isMaster ? "Estoque de Configs Livres" : "Minhas Configs Livres"}</CardTitle>
+                <CardTitle>{isMasterAdmin ? "Estoque de Configs Livres" : "Minhas Configs Livres"}</CardTitle>
                 <CardDescription>
-                  {isMaster ? "Visualizar e atribuir licenças que ainda não possuem dono." : "Gerencie licenças prontas para repasse aos seus revendedores."}
+                  {isMasterAdmin ? "Visualizar e atribuir licenças que ainda não possuem dono." : "Gerencie licenças prontas para repasse aos seus revendedores."}
                 </CardDescription>
               </div>
               <div className="w-full sm:w-64">
