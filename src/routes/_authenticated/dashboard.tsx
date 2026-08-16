@@ -363,6 +363,51 @@ function DashboardPage() {
     }
   };
 
+  const handleAssignLicense = async () => {
+    if (!assignData.licenseId || !assignData.resellerId) {
+      toast.error("Selecione um revendedor");
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      await assignLicenseFn({ data: assignData });
+      toast.success("Licença atribuída com sucesso!");
+      setIsAssignModalOpen(false);
+      await Promise.all([
+        unassignedQuery.refetch(),
+        statsQuery.refetch(),
+        resellersQuery.refetch()
+      ]);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atribuir licença.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteLicense = async (licenseId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta licença do estoque?")) return;
+    
+    setIsProcessing(true);
+    try {
+      await deleteLicenseFn({ data: { licenseId } });
+      toast.success("Licença excluída!");
+      await Promise.all([
+        unassignedQuery.refetch(),
+        statsQuery.refetch()
+      ]);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir licença.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const filteredUnassigned = (unassignedQuery.data || []).filter((l: any) => 
+    l.key.includes(searchTerm) || l.filename.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const copyToClipboard = (key: string) => {
     navigator.clipboard.writeText(key);
     toast.info("Chave copiada!");
