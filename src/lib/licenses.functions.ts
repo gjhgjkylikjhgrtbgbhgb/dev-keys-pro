@@ -155,35 +155,33 @@ export const createReseller = createServerFn({ method: "POST" })
     password: z.string(),
     full_name: z.string(),
     whatsapp: z.string().optional(),
+    credits: z.number().optional(),
   }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { phone, password, full_name, whatsapp } = data;
+    const { phone, password, full_name, whatsapp, credits = 0 } = data;
 
     if (!phone || !password || !full_name) {
       throw new Error("Campos obrigatórios ausentes");
     }
 
-    let normalizedPhone = phone.trim();
-    if (!normalizedPhone.startsWith("+")) {
-      normalizedPhone = `+55${normalizedPhone.replace(/\D/g, "")}`;
-    }
+    const cleanLogin = phone.trim().replace(/\D/g, "");
+    const email = `${cleanLogin}@painel.local`;
 
     // Tenta encontrar se já existe no auth via admin para evitar erro de duplicidade
     const { data: listUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const foundUser = listUsers.users.find(u => u.phone === normalizedPhone);
+    const foundUser = listUsers.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
     
     let userId: string;
 
     if (foundUser) {
       userId = foundUser.id;
-      console.log("Usuário auth já existe:", normalizedPhone);
     } else {
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        phone: normalizedPhone,
+        email: email,
         password: password,
-        phone_confirm: true,
-        user_metadata: { full_name, whatsapp }
+        email_confirm: true,
+        user_metadata: { full_name, whatsapp, phone: cleanLogin }
       });
 
       if (authError) throw authError;
@@ -202,9 +200,9 @@ export const createReseller = createServerFn({ method: "POST" })
       .from("profiles")
       .upsert({
         id: userId,
-        phone: normalizedPhone,
+        phone: cleanLogin,
         full_name,
-        credits: 0,
+        credits: credits,
         is_blocked: false,
         is_admin: false,
         support_whatsapp: whatsapp || "",
@@ -212,6 +210,27 @@ export const createReseller = createServerFn({ method: "POST" })
       } as any, { onConflict: 'id' });
 
     if (profileError) throw profileError;
+
+    // Se houver créditos iniciais, vincular licenças se disponíveis
+    if (credits > 0) {
+      try {
+        const { data: availableLicenses } = await supabaseAdmin
+          .from("licenses")
+          .select("id")
+          .is("owner_id", null)
+          .eq("status", "active")
+          .limit(credits);
+        
+        if (availableLicenses && availableLicenses.length > 0) {
+          await supabaseAdmin
+            .from("licenses")
+            .update({ owner_id: userId })
+            .in("id", availableLicenses.map(l => l.id));
+        }
+      } catch (e) {
+        console.error("Erro ao transferir créditos iniciais:", e);
+      }
+    }
 
     return { success: true };
   });

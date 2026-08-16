@@ -35,6 +35,7 @@ function AuthPage() {
     setLoading(true);
     try {
       const cleanPhone = phone.trim().replace(/\D/g, "");
+      const loginEmail = `${cleanPhone}@painel.local`;
       const isMaster = cleanPhone === "11921009176" && password === "Robson123";
 
       if (isMaster) {
@@ -51,24 +52,20 @@ function AuthPage() {
           throw new Error("Falha ao sincronizar Master Admin");
         }
       } else {
-        let normalizedPhone = phone.trim();
-        if (!normalizedPhone.startsWith("+")) {
-          normalizedPhone = `+55${normalizedPhone.replace(/\D/g, "")}`;
-        }
-
         const { error } = await supabase.auth.signInWithPassword({
-          phone: normalizedPhone,
+          email: loginEmail,
           password: password,
         });
 
         if (error) {
-          const { error: emailError } = await supabase.auth.signInWithPassword({
+          // Fallback para e-mail padrão se houver (compatibilidade)
+          const { error: fallbackError } = await supabase.auth.signInWithPassword({
             email: phone,
             password: password,
           });
           
-          if (emailError) {
-            throw new Error("Credenciais inválidas");
+          if (fallbackError) {
+            throw new Error("Número ou senha incorretos");
           }
         }
       }
@@ -103,11 +100,11 @@ function AuthPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefone / Usuário</Label>
+              <Label htmlFor="phone">Telefone / Número de Acesso</Label>
               <Input
                 id="phone"
                 type="text"
-                placeholder="DDD + Número"
+                placeholder="Ex: 11999998888" 
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
