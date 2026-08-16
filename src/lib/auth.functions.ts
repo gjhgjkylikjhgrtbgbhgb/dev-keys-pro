@@ -48,7 +48,13 @@ export const ensureMasterAdmin = createServerFn({ method: "POST" })
     await supabaseAdmin
       .from("profiles")
       .upsert(
-        { id: user!.id, phone: MASTER_PHONE, full_name: "Admin Master", is_blocked: false },
+        { 
+          id: user!.id, 
+          phone: MASTER_PHONE, 
+          full_name: "Admin Master", 
+          is_blocked: false,
+          is_admin: true
+        } as any,
         { onConflict: "id" },
       );
 
