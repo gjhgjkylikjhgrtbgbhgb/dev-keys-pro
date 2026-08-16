@@ -579,13 +579,12 @@ function DashboardPage() {
       >
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
           <TabsTrigger value="licenses" className="px-6 py-2">
-            {isMaster ? "Licenças" : isSubAdmin ? "Licenças" : "Minhas Licenças"}
+            {isMasterAdmin ? "Licenças" : "Minhas Licenças"}
           </TabsTrigger>
-          <TabsTrigger value="resellers" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Revendedores</TabsTrigger>
-          {isAdmin && (
+          {isMasterAdmin && (
             <>
-              {isMaster && <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>}
-
+              <TabsTrigger value="resellers" className="px-6 py-2">Revendedores</TabsTrigger>
+              <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
             </>
           )}
         </TabsList>
@@ -602,7 +601,7 @@ function DashboardPage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {(isMaster || (currentUser?.can_upload !== false)) && (
+                {isMasterAdmin && (
                   <>
                     <input
                       type="file"
@@ -616,19 +615,20 @@ function DashboardPage() {
                       accept=".config,.txt"
                       className="hidden"
                     />
-                    <Button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all"
-                      disabled={isProcessing}
-                    >
-                      <Upload className="w-4 h-4"/>
-                      {isProcessing ? "Enviando..." : "Upload Configs"}
-                    </Button>
-                    <p className="text-[10px] text-amber-500 mt-1 max-w-[150px]">
-                      Somente admin pode usar. Se você usar vai tudo pro painel master
-                    </p>
-
+                    <div className="flex flex-col">
+                      <Button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all"
+                        disabled={isProcessing}
+                      >
+                        <Upload className="w-4 h-4"/>
+                        {isProcessing ? "Enviando..." : "Upload Configs"}
+                      </Button>
+                      <p className="text-[10px] text-amber-500 mt-1 max-w-[150px]">
+                        Somente admin pode usar. Se você usar vai tudo pro painel master
+                      </p>
+                    </div>
                   </>
                 )}
                 <Button 
@@ -910,7 +910,7 @@ function DashboardPage() {
                             >
                               <Send className="h-3 w-3 mr-1" /> Créditos
                             </Button>
-                            {isMaster && (
+                            {isMasterAdmin && (
                               <>
                                 <Button 
                                   variant="outline" 
@@ -922,24 +922,6 @@ function DashboardPage() {
                                   {reseller.can_upload ? <Lock className="h-3 w-3 mr-1" /> : <Unlock className="h-3 w-3 mr-1" />}
                                   {reseller.can_upload ? "Bloquear" : "Liberar"}
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  className="border-white/10 text-blue-400 hover:text-blue-300"
-                                  onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                                >
-                                  <ShieldAlert className="h-3 w-3 mr-1" />
-                                  {reseller.is_admin ? "Remover Sub" : "Tornar Sub"}
-                                </Button>
-                                {isMaster && (
-                                  <Button 
-                                    onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                                    className="w-full py-2 bg-purple-600 text-white rounded text-xs"
-                                  >
-                                    {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
-                                  </Button>
-                                )}
-
                               </>
                             )}
                             <Button 
@@ -1052,24 +1034,6 @@ function DashboardPage() {
                         <XCircle className="h-3 w-3 mr-1" /> Excluir
                       </Button>
                     </div>
-                    {isMaster && (
-                      <div className="flex flex-col gap-2 pt-2 border-t border-white/5 mt-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
-                          onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                        >
-                          {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
-                        </Button>
-                        <Button 
-                          onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                          className="w-full py-2 bg-purple-600 text-white rounded text-xs mt-2"
-                        >
-                          {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
-                        </Button>
-                      </div>
-                    )}
 
                   </CardContent>
                 </Card>

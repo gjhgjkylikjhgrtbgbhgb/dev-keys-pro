@@ -46,20 +46,15 @@ export const getLicenseStats = createServerFn({ method: "GET" })
       activeCount = active || 0;
       assignedCount = assigned || 0;
       unassignedCount = unassigned || 0;
-    } else if (isAdmin) {
-      // Sub-Admin vê apenas o que é dele ou de seus revendedores
-      // 1. Configs Livres dele
+    } else {
+      // Revendedor vê apenas suas licenças ativas como "estoque livre" para ele
       const { count: unassigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).eq("owner_id", user.id).eq("status", "active");
       unassignedCount = unassigned || 0;
-
-      // 2. Licenças Repassadas (estão com revendedores que ele cadastrou)
-      const { data: myResellers } = await supabaseAdmin.from("profiles").select("id").eq("parent_id", user.id);
-      const resellerIds = (myResellers || []).map(r => r.id);
       
-      if (resellerIds.length > 0) {
-        const { count: assigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).in("owner_id", resellerIds);
-        assignedCount = assigned || 0;
-      }
+      // Revendedores comuns não vêem métricas globais
+      totalCount = 0;
+      activeCount = 0;
+      assignedCount = 0;
     }
 
     return {
