@@ -116,6 +116,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_credits: {
+        Args: { amount: number; row_id: string }
+        Returns: undefined
+      }
       increment_inventory: {
         Args: { amount: number; row_id: string }
         Returns: undefined
