@@ -427,55 +427,93 @@ function DashboardPage() {
               </Button>
             </CardHeader>
             <CardContent className="p-0 sm:p-6 overflow-x-auto">
-              <Table className="min-w-[600px]">
-
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Chave</TableHead>
-                    <TableHead>Arquivo</TableHead>
-                    {isAdmin && <TableHead>Dono</TableHead>}
-                    <TableHead>Usos</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {licenses.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
-                        Nenhuma licença encontrada.
-                      </TableCell>
+              <div className="hidden md:block">
+                <Table className="min-w-[600px]">
+                  <TableHeader>
+                    <TableRow className="border-white/5">
+                      <TableHead>Chave</TableHead>
+                      <TableHead>Arquivo</TableHead>
+                      {isAdmin && <TableHead>Dono</TableHead>}
+                      <TableHead>Usos</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Ação</TableHead>
                     </TableRow>
-                  ) : licenses
-                    .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
-                    .map((license: any) => (
-                    <TableRow key={license.id}>
-                      <TableCell className="font-mono font-bold">{license.key}</TableCell>
-                      <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          {license.owner?.full_name || <Badge variant="outline">Livre</Badge>}
+                  </TableHeader>
+                  <TableBody>
+                    {licenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
+                          Nenhuma licença encontrada.
                         </TableCell>
-                      )}
-                      <TableCell>{license.uses_remaining}/3</TableCell>
-                      <TableCell>
+                      </TableRow>
+                    ) : licenses
+                      .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
+                      .map((license: any) => (
+                      <TableRow key={license.id} className="border-white/5">
+                        <TableCell className="font-mono font-bold">{license.key}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            {license.owner?.full_name || <Badge variant="outline">Livre</Badge>}
+                          </TableCell>
+                        )}
+                        <TableCell>{license.uses_remaining}/3</TableCell>
+                        <TableCell>
+                          <Badge variant={license.status === "active" ? "default" : "destructive"}>
+                            {license.status === "active" ? "Ativo" : "Esgotado"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {format(new Date(license.created_at), "dd/MM HH:mm")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => copyToClipboard(license.key)}>
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile View - Licenses Cards */}
+              <div className="md:hidden space-y-4 p-4">
+                {licenses.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma licença encontrada.
+                  </div>
+                ) : licenses
+                  .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
+                  .map((license: any) => (
+                  <Card key={license.id} className="bg-[#0F172A] border-white/5 overflow-hidden">
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono font-bold text-lg">{license.key}</span>
                         <Badge variant={license.status === "active" ? "default" : "destructive"}>
                           {license.status === "active" ? "Ativo" : "Esgotado"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(license.created_at), "dd/MM HH:mm")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(license.key)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                      <CardDescription className="truncate text-xs">{license.filename}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-2 space-y-2">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Usos: {license.uses_remaining}/3</span>
+                        <span>{format(new Date(license.created_at), "dd/MM HH:mm")}</span>
+                      </div>
+                      {isAdmin && (
+                        <div className="text-xs">
+                          Dono: {license.owner?.full_name || "Livre"}
+                        </div>
+                      )}
+                      <Button variant="secondary" size="sm" className="w-full mt-2" onClick={() => copyToClipboard(license.key)}>
+                        <Copy className="h-4 w-4 mr-2" /> Copiar Chave
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
