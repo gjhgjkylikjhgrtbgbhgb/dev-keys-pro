@@ -473,6 +473,88 @@ export const updateLastSeen = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+export const getUnassignedLicenses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabase } = context;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autorizado");
+
+    // Somente Admins podem ver configs livres
+    const MASTER_PHONE = "11921009176";
+    const userPhone = user.phone?.replace(/\D/g, "") || "";
+    
+    // Buscar perfil para ver se é admin
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+
+    const isMaster = userPhone === MASTER_PHONE;
+    const isAdmin = isMaster || profile?.is_admin;
+
+    if (!isAdmin) throw new Error("Acesso negado");
+
+    const { data, error } = await supabaseAdmin
+      .from("licenses")
+      .select("*")
+      .is("owner_id", null)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  });
+
+export const assignLicense = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: any) => z.object({
+    licenseId: z.string(),
+    resellerId: z.string(),
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { licenseId, resellerId } = data;
+
+    // 1. Vincular licença
+    const { error: updateError } = await supabaseAdmin
+      .from("licenses")
+      .update({ owner_id: resellerId })
+      .eq("id", licenseId);
+
+    if (updateError) throw updateError;
+
+    // 2. Incrementar créditos do revendedor
+    const { error: rpcError } = await supabaseAdmin.rpc("increment_credits", {
+      row_id: resellerId,
+      amount: 1
+    });
+
+    if (rpcError) throw rpcError;
+
+    return { success: true };
+  });
+
+export const deleteLicense = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: any) => z.object({
+    licenseId: z.string(),
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { licenseId } = data;
+
+    const { error } = await supabaseAdmin
+      .from("licenses")
+      .delete()
+      .eq("id", licenseId);
+
+    if (error) throw error;
+    return { success: true };
+  });
+
 const createLicensesSchema = z.object({
   licenses: z.array(z.object({
     key: z.string().length(6),

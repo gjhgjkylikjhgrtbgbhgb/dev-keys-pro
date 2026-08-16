@@ -11,7 +11,10 @@ import {
   toggleAdminStatus,
   updateLastSeen,
   deleteExhaustedLicenses,
-  deleteReseller
+  deleteReseller,
+  getUnassignedLicenses,
+  assignLicense,
+  deleteLicense
 } from "@/lib/licenses.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -28,7 +32,7 @@ import { toast } from "sonner";
 import { 
   Copy, Upload, CheckCircle2, XCircle, Clock, Database, 
   Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare, ShieldAlert,
-  RefreshCw, Eye, EyeOff
+  RefreshCw, Eye, EyeOff, Cloud, Key, Trash2
 } from "lucide-react";
 
 import { format } from "date-fns";
@@ -71,6 +75,18 @@ const resellersQueryOptions = queryOptions({
   },
 });
 
+const unassignedQueryOptions = queryOptions({
+  queryKey: ["unassigned-licenses"],
+  queryFn: async () => {
+    try {
+      return await getUnassignedLicenses();
+    } catch (error) {
+      console.error("Unassigned Licenses error:", error);
+      return [];
+    }
+  },
+});
+
 function licenseStatusLabel(license: any) {
   if (license.status === "blocked") return "Bloqueada";
   if (license.status !== "active" || (license.uses_remaining ?? 0) <= 0) return "Usada";
@@ -91,6 +107,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
         context.queryClient.ensureQueryData(statsQueryOptions),
         context.queryClient.ensureQueryData(licensesQueryOptions),
         context.queryClient.ensureQueryData(resellersQueryOptions),
+        context.queryClient.ensureQueryData(unassignedQueryOptions),
       ]);
     } catch (e) {
       console.error("Loader failed, continuing to component", e);
@@ -108,6 +125,7 @@ function DashboardPage() {
   const statsQuery = useSuspenseQuery(statsQueryOptions);
   const licensesQuery = useSuspenseQuery(licensesQueryOptions);
   const resellersQuery = useSuspenseQuery(resellersQueryOptions);
+  const unassignedQuery = useSuspenseQuery(unassignedQueryOptions);
   
   // Pegar dados do contexto da rota carregados no loader
   const context = Route.useRouteContext() as any;
@@ -125,6 +143,8 @@ function DashboardPage() {
   const toggleAdminFn = useServerFn(toggleAdminStatus);
   const deleteExhaustedFn = useServerFn(deleteExhaustedLicenses);
   const deleteResellerFn = useServerFn(deleteReseller);
+  const assignLicenseFn = useServerFn(assignLicense);
+  const deleteLicenseFn = useServerFn(deleteLicense);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "", credits: 0 });
@@ -133,6 +153,9 @@ function DashboardPage() {
   const [showResellerPassword, setShowResellerPassword] = useState(false);
   const [isCreatingReseller, setIsCreatingReseller] = useState(false);
   const [isResellerModalOpen, setIsResellerModalOpen] = useState(false);
+  const [assignData, setAssignData] = useState({ licenseId: "", resellerId: "" });
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
 
   // Fallback data para evitar quebras se a query retornar undefined/null
@@ -340,6 +363,51 @@ function DashboardPage() {
     }
   };
 
+  const handleAssignLicense = async () => {
+    if (!assignData.licenseId || !assignData.resellerId) {
+      toast.error("Selecione um revendedor");
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      await assignLicenseFn({ data: assignData });
+      toast.success("Licença atribuída com sucesso!");
+      setIsAssignModalOpen(false);
+      await Promise.all([
+        unassignedQuery.refetch(),
+        statsQuery.refetch(),
+        resellersQuery.refetch()
+      ]);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atribuir licença.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteLicense = async (licenseId: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta licença do estoque?")) return;
+    
+    setIsProcessing(true);
+    try {
+      await deleteLicenseFn({ data: { licenseId } });
+      toast.success("Licença excluída!");
+      await Promise.all([
+        unassignedQuery.refetch(),
+        statsQuery.refetch()
+      ]);
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir licença.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const filteredUnassigned = (unassignedQuery.data || []).filter((l: any) => 
+    l.key.includes(searchTerm) || l.filename.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const copyToClipboard = (key: string) => {
     navigator.clipboard.writeText(key);
     toast.info("Chave copiada!");
@@ -464,6 +532,7 @@ function DashboardPage() {
         onValueChange={(value) => {
           if (value === "resellers") resellersQuery.refetch();
           if (value === "licenses") licensesQuery.refetch();
+          if (value === "unassigned") unassignedQuery.refetch();
         }}
       >
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
@@ -472,7 +541,16 @@ function DashboardPage() {
           </TabsTrigger>
           <TabsTrigger value="resellers" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Revendedores</TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
+            <>
+              <TabsTrigger value="unassigned" className="px-6 py-2 flex items-center gap-2">
+                <Cloud className="h-4 w-4" />
+                Configs Livres
+                <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-none px-1.5 py-0 h-5">
+                  {stats.unassigned}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -886,6 +964,84 @@ function DashboardPage() {
             </div>
           </TabsContent>
 
+        <TabsContent value="unassigned" className="mt-6">
+          <Card className="bg-[#1E293B] border-white/5">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <CardTitle>Estoque de Configs Livres</CardTitle>
+                <CardDescription>Visualizar e atribuir licenças que ainda não possuem dono.</CardDescription>
+              </div>
+              <div className="w-full sm:w-64">
+                <Input
+                  placeholder="Buscar por chave ou nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-[#0F172A] border-white/10"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-6 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-white/5">
+                    <TableHead>Chave</TableHead>
+                    <TableHead>Arquivo</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Importado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUnassigned.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                        Nenhuma config livre encontrada.
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredUnassigned.map((license: any) => (
+                    <TableRow key={license.id} className="border-white/5">
+                      <TableCell className="font-mono font-bold">{license.key}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{license.filename}</TableCell>
+                      <TableCell>
+                        <Badge variant="default" className="bg-green-500/10 text-green-400">
+                          Sem Dono
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(license.created_at), "dd/MM HH:mm")}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(license.key)} title="Copiar Chave">
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border-blue-600/30"
+                          onClick={() => {
+                            setAssignData({ ...assignData, licenseId: license.id });
+                            setIsAssignModalOpen(true);
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4 mr-2" /> Atribuir
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteLicense(license.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="upload" className="mt-6">
           {!isAdmin && (
             <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center mb-6">
@@ -914,6 +1070,39 @@ function DashboardPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
+        <DialogContent className="bg-[#1E293B] border-white/5 text-white">
+          <DialogHeader>
+            <DialogTitle>Atribuir Licença</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Selecione o revendedor para vincular esta licença.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Revendedor</Label>
+              <Select onValueChange={(val) => setAssignData({...assignData, resellerId: val})}>
+                <SelectTrigger className="bg-[#0F172A] border-white/10">
+                  <SelectValue placeholder="Selecione um revendedor" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1E293B] border-white/5 text-white">
+                  {resellers.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.full_name} ({r.phone})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignModalOpen(false)}>Cancelar</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleAssignLicense} disabled={isProcessing}>
+              Confirmar Atribuição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={isTransferOpen} onOpenChange={setIsTransferOpen}>
         <DialogContent>
