@@ -6,7 +6,7 @@ export const MASTER_PASSWORD = "Robson123";
 
 export function phoneToEmail(phone: string) {
   const digits = phone.trim().replace(/\D/g, "");
-  return `${digits}@app.local`;
+  return `${digits}@painel.local`;
 }
 
 /**
