@@ -1151,7 +1151,7 @@ function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          </TabsContent>
         )}
       </Tabs>
 
