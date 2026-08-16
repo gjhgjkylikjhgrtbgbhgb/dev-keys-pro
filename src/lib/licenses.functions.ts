@@ -240,10 +240,11 @@ export const transferLicenses = createServerFn({ method: "POST" })
     amount: z.number().positive(),
   }).parse(data))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { resellerId, amount } = data;
 
-    const { data: availableLicenses, error: fetchError } = await supabase
+    // 1. Buscar licenças disponíveis (livres e ativas)
+    const { data: availableLicenses, error: fetchError } = await supabaseAdmin
       .from("licenses")
       .select("id")
       .is("owner_id", null)
@@ -252,24 +253,43 @@ export const transferLicenses = createServerFn({ method: "POST" })
 
     if (fetchError) throw fetchError;
     if (!availableLicenses || availableLicenses.length < amount) {
-      throw new Error("Estoque insuficiente de licenças livres");
+      throw new Error(`Estoque insuficiente de licenças livres. Disponível: ${availableLicenses?.length || 0}`);
     }
 
     const licenseIds = availableLicenses.map(l => l.id);
 
-    const { error: updateError } = await supabase
+    // 2. Vincular as licenças ao revendedor
+    const { error: updateError } = await supabaseAdmin
       .from("licenses")
       .update({ owner_id: resellerId })
       .in("id", licenseIds);
 
     if (updateError) throw updateError;
 
-    const { error: profileError } = await (supabase as any).rpc("increment_credits", {
+    // 3. Incrementar créditos no perfil usando o RPC com service_role
+    const { error: profileError } = await supabaseAdmin.rpc("increment_credits", {
       row_id: resellerId,
       amount: amount
     });
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error("RPC increment_credits error:", profileError);
+      // Fallback: update direto se o RPC falhar ou não for encontrado
+      const { data: currentProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("credits")
+        .eq("id", resellerId)
+        .single();
+      
+      const newCredits = (currentProfile?.credits || 0) + amount;
+      
+      const { error: updateCreditsError } = await supabaseAdmin
+        .from("profiles")
+        .update({ credits: newCredits } as any)
+        .eq("id", resellerId);
+        
+      if (updateCreditsError) throw updateCreditsError;
+    }
 
     return { success: true };
   });
