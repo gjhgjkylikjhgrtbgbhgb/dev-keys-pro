@@ -132,9 +132,9 @@ function DashboardPage() {
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
   const MASTER_PHONE = '11921009176';
-  const isMaster = currentUser?.phone?.replace(/\D/g, '') === MASTER_PHONE || currentUser?.is_admin === true;
-  const isMasterAdmin = isMaster;
-  const isAdmin = isMaster;
+  const phoneNormalized = (currentUser?.phone || '').replace(/\D/g, '');
+  const isMasterAdmin = phoneNormalized.includes(MASTER_PHONE) || currentUser?.is_admin === true;
+  const isAdmin = isMasterAdmin;
   const isSubAdmin = false;
 
 
