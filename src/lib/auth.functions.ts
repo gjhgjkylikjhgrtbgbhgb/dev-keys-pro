@@ -53,8 +53,8 @@ export const ensureMasterAdmin = createServerFn({ method: "POST" })
           phone: MASTER_PHONE, 
           full_name: "Admin Master", 
           is_blocked: false,
-          is_admin: true // Garante a flag is_admin
-        },
+          is_admin: true
+        } as any,
         { onConflict: "id" },
       );
 
