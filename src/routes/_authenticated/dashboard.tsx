@@ -941,6 +941,15 @@ function DashboardPage() {
                                   <ShieldAlert className="h-3 w-3 mr-1" />
                                   {reseller.is_admin ? "Remover Sub" : "Tornar Sub"}
                                 </Button>
+                                {isMaster && (
+                                  <Button 
+                                    onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                                    className="w-full py-2 bg-purple-600 text-white rounded text-xs"
+                                  >
+                                    {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
+                                  </Button>
+                                )}
+
                               </>
                             )}
                             <Button 
