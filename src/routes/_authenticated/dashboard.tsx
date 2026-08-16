@@ -149,6 +149,7 @@ function DashboardPage() {
   const deleteLicenseFn = useServerFn(deleteLicense);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "", credits: 0 });
   const [transferData, setTransferData] = useState({ resellerId: "", amount: 1 });
   const [isTransferOpen, setIsTransferOpen] = useState(false);
