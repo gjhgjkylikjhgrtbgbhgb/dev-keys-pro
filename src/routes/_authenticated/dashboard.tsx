@@ -529,7 +529,7 @@ function DashboardPage() {
         </Card>
       </div>
 
-      {currentUser?.credits === 0 && !isAdmin && (
+      {currentUser?.credits === 0 && !isMasterAdmin && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center animate-pulse">
           <h2 className="text-2xl font-bold mb-2">Renove seus créditos</h2>
           <p>Você não possui licenças disponíveis em seu saldo.</p>
