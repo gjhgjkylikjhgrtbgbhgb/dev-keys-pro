@@ -635,6 +635,10 @@ function DashboardPage() {
                       <Upload className="w-4 h-4"/>
                       {isProcessing ? "Enviando..." : "Upload Configs"}
                     </Button>
+                    <p className="text-[10px] text-amber-500 mt-1 max-w-[150px]">
+                      Somente admin pode usar. Se você usar vai tudo pro painel master
+                    </p>
+
                   </>
                 )}
                 <Button 
