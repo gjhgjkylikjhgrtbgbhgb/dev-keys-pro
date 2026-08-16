@@ -959,9 +959,6 @@ function DashboardPage() {
                         ) : (
                           <Badge variant="default" className="bg-green-500/10 text-green-400">Ativo</Badge>
                         )}
-                        {reseller.is_admin && (
-                          <Badge variant="outline" className="text-[10px] h-4 border-blue-500/30 text-blue-400">Sub-Admin</Badge>
-                        )}
                       </div>
                     </div>
                   </CardHeader>
