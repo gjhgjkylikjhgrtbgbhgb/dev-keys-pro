@@ -107,6 +107,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
         context.queryClient.ensureQueryData(statsQueryOptions),
         context.queryClient.ensureQueryData(licensesQueryOptions),
         context.queryClient.ensureQueryData(resellersQueryOptions),
+        context.queryClient.ensureQueryData(unassignedQueryOptions),
       ]);
     } catch (e) {
       console.error("Loader failed, continuing to component", e);
@@ -124,6 +125,7 @@ function DashboardPage() {
   const statsQuery = useSuspenseQuery(statsQueryOptions);
   const licensesQuery = useSuspenseQuery(licensesQueryOptions);
   const resellersQuery = useSuspenseQuery(resellersQueryOptions);
+  const unassignedQuery = useSuspenseQuery(unassignedQueryOptions);
   
   // Pegar dados do contexto da rota carregados no loader
   const context = Route.useRouteContext() as any;
