@@ -71,6 +71,19 @@ const resellersQueryOptions = queryOptions({
   },
 });
 
+function licenseStatusLabel(license: any) {
+  if (license.status === "blocked") return "Bloqueada";
+  if (license.status !== "active" || (license.uses_remaining ?? 0) <= 0) return "Usada";
+  return "Disponível";
+}
+
+function licenseStatusVariant(license: any): "default" | "destructive" | "secondary" {
+  const label = licenseStatusLabel(license);
+  if (label === "Disponível") return "default";
+  if (label === "Bloqueada") return "secondary";
+  return "destructive";
+}
+
 export const Route = createFileRoute("/_authenticated/dashboard")({
   loader: async ({ context }) => {
     try {
@@ -464,9 +477,7 @@ function DashboardPage() {
                           Nenhuma licença encontrada.
                         </TableCell>
                       </TableRow>
-                    ) : licenses
-                      .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
-                      .map((license: any) => (
+                    ) : licenses.map((license: any) => (
                       <TableRow key={license.id} className="border-white/5">
                         <TableCell className="font-mono font-bold">{license.key}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
@@ -477,8 +488,8 @@ function DashboardPage() {
                         )}
                         <TableCell>{license.uses_remaining}/3</TableCell>
                         <TableCell>
-                          <Badge variant={license.status === "active" ? "default" : "destructive"}>
-                            {license.status === "active" ? "Ativo" : "Esgotado"}
+                          <Badge variant={licenseStatusVariant(license)}>
+                            {licenseStatusLabel(license)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
@@ -501,15 +512,13 @@ function DashboardPage() {
                   <div className="text-center py-8 text-muted-foreground">
                     Nenhuma licença encontrada.
                   </div>
-                ) : licenses
-                  .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
-                  .map((license: any) => (
+                ) : licenses.map((license: any) => (
                   <Card key={license.id} className="bg-[#0F172A] border-white/5 overflow-hidden">
                     <CardHeader className="p-4 pb-2">
                       <div className="flex justify-between items-center">
                         <span className="font-mono font-bold text-lg">{license.key}</span>
-                        <Badge variant={license.status === "active" ? "default" : "destructive"}>
-                          {license.status === "active" ? "Ativo" : "Esgotado"}
+                        <Badge variant={licenseStatusVariant(license)}>
+                          {licenseStatusLabel(license)}
                         </Badge>
                       </div>
                       <CardDescription className="truncate text-xs">{license.filename}</CardDescription>
