@@ -731,7 +731,7 @@ function DashboardPage() {
                     </div>
 
                     <Button 
-                      variant="emerald" 
+                      variant="default" 
                       className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-semibold transition-all flex items-center justify-center gap-2 rounded-lg"
                       onClick={() => copyToClipboard(license.key)}
                     >
