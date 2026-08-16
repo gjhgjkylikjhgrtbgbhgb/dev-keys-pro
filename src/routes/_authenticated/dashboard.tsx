@@ -131,6 +131,8 @@ function DashboardPage() {
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
   const isAdmin = context.isAdmin;
+  const isMaster = (currentUser?.phone || "").replace(/\D/g, "") === "11921009176";
+  const isSubAdmin = !isMaster && isAdmin;
 
 
 
@@ -517,7 +519,7 @@ function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{resellers.length}</div>
             <p className="text-xs text-muted-foreground">
-              {isAdmin ? "Gestão da rede" : "Seus vinculados"}
+              {isMaster ? "Gestão da rede" : "Meus Revendedores"}
             </p>
           </CardContent>
         </Card>
@@ -563,19 +565,19 @@ function DashboardPage() {
       >
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
           <TabsTrigger value="licenses" className="px-6 py-2">
-            {isAdmin ? "Licenças" : "Minhas Licenças"}
+            {isMaster ? "Licenças" : isSubAdmin ? "Licenças" : "Minhas Licenças"}
           </TabsTrigger>
           <TabsTrigger value="resellers" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Revendedores</TabsTrigger>
           {isAdmin && (
             <>
               <TabsTrigger value="unassigned" className="px-6 py-2 flex items-center gap-2">
                 <Cloud className="h-4 w-4" />
-                Configs Livres
+                {isMaster ? "Configs Livres" : "Minhas Livres"}
                 <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-none px-1.5 py-0 h-5">
                   {stats.unassigned}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
+              {isMaster && <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>}
             </>
           )}
         </TabsList>
@@ -862,7 +864,7 @@ function DashboardPage() {
                             >
                               <Send className="h-3 w-3 mr-1" /> Créditos
                             </Button>
-                            {isAdmin && (
+                            {isMaster && (
                               <Button 
                                 variant="outline" 
                                 size="sm"
@@ -974,7 +976,7 @@ function DashboardPage() {
                         <XCircle className="h-3 w-3 mr-1" /> Excluir
                       </Button>
                     </div>
-                    {isAdmin && (
+                    {isMaster && (
                       <Button 
                         variant="ghost" 
                         size="sm"
