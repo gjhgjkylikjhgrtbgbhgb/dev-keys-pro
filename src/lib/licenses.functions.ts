@@ -43,12 +43,6 @@ export const getLicenses = createServerFn({ method: "GET" })
     ].map(v => String(v).replace(/\D/g, ""));
     const isMaster = identifiers.includes(MASTER_PHONE);
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .maybeSingle();
-
     let query = supabaseAdmin
       .from("licenses")
       .select("*")
@@ -73,8 +67,6 @@ export const getLicenses = createServerFn({ method: "GET" })
         .in("id", ownerIds);
       ownersMap = new Map((owners || []).map(o => [o.id, { full_name: o.full_name }]));
     }
-
-    void profile;
 
     return licenses.map(l => ({
       ...l,
