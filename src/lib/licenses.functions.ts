@@ -80,6 +80,8 @@ export const getResellers = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase } = context;
     
+    const MASTER_PHONE = "+5511921009176";
+    
     const { data: roles, error: rolesError } = await supabase
       .from("user_roles")
       .select("user_id")
@@ -93,10 +95,37 @@ export const getResellers = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
-      .in("id", ids);
+      .in("id", ids)
+      .neq("phone", MASTER_PHONE);
 
     if (error) throw error;
     return data || [];
+  });
+
+export const deleteReseller = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: any) => z.object({
+    userId: z.string(),
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { userId } = data;
+
+    // Não permitir deletar o master
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("phone")
+      .eq("id", userId)
+      .single();
+
+    if (profile?.phone === "+5511921009176") {
+      throw new Error("Não é possível excluir o administrador master");
+    }
+
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (authError) throw authError;
+
+    return { success: true };
   });
 
 export const createReseller = createServerFn({ method: "POST" })

@@ -10,7 +10,8 @@ import {
   transferLicenses,
   toggleAdminStatus,
   updateLastSeen,
-  deleteExhaustedLicenses
+  deleteExhaustedLicenses,
+  deleteReseller
 } from "@/lib/licenses.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -110,6 +111,7 @@ function DashboardPage() {
   const transferFn = useServerFn(transferLicenses);
   const toggleAdminFn = useServerFn(toggleAdminStatus);
   const deleteExhaustedFn = useServerFn(deleteExhaustedLicenses);
+  const deleteResellerFn = useServerFn(deleteReseller);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "" });
@@ -117,6 +119,7 @@ function DashboardPage() {
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [showResellerPassword, setShowResellerPassword] = useState(false);
   const [isCreatingReseller, setIsCreatingReseller] = useState(false);
+  const [isResellerModalOpen, setIsResellerModalOpen] = useState(false);
 
 
   // Fallback data para evitar quebras se a query retornar undefined/null
@@ -203,7 +206,9 @@ function DashboardPage() {
       toast.success("Revendedor cadastrado com sucesso!");
       setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "" });
       setShowResellerPassword(false);
+      setIsResellerModalOpen(false);
       await resellersQuery.refetch();
+      await statsQuery.refetch();
     } catch (error: any) {
       console.error("Erro ao cadastrar revendedor:", error);
       toast.error(error.message || "Erro ao cadastrar revendedor.");
@@ -258,6 +263,19 @@ function DashboardPage() {
       await resellersQuery.refetch();
     } catch (error) {
       toast.error("Erro ao alterar privilégios.");
+    }
+  };
+
+  const handleDeleteReseller = async (userId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este revendedor? Esta ação é irreversível.")) return;
+    
+    try {
+      await deleteResellerFn({ data: { userId } });
+      toast.success("Revendedor excluído!");
+      await resellersQuery.refetch();
+      await statsQuery.refetch();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao excluir revendedor.");
     }
   };
 
@@ -409,85 +427,132 @@ function DashboardPage() {
               </Button>
             </CardHeader>
             <CardContent className="p-0 sm:p-6 overflow-x-auto">
-              <Table className="min-w-[600px]">
-
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Chave</TableHead>
-                    <TableHead>Arquivo</TableHead>
-                    {isAdmin && <TableHead>Dono</TableHead>}
-                    <TableHead>Usos</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Ação</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {licenses.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
-                        Nenhuma licença encontrada.
-                      </TableCell>
+              <div className="hidden md:block">
+                <Table className="min-w-[600px]">
+                  <TableHeader>
+                    <TableRow className="border-white/5">
+                      <TableHead>Chave</TableHead>
+                      <TableHead>Arquivo</TableHead>
+                      {isAdmin && <TableHead>Dono</TableHead>}
+                      <TableHead>Usos</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Ação</TableHead>
                     </TableRow>
-                  ) : licenses
-                    .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
-                    .map((license: any) => (
-                    <TableRow key={license.id}>
-                      <TableCell className="font-mono font-bold">{license.key}</TableCell>
-                      <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          {license.owner?.full_name || <Badge variant="outline">Livre</Badge>}
+                  </TableHeader>
+                  <TableBody>
+                    {licenses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
+                          Nenhuma licença encontrada.
                         </TableCell>
-                      )}
-                      <TableCell>{license.uses_remaining}/3</TableCell>
-                      <TableCell>
+                      </TableRow>
+                    ) : licenses
+                      .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
+                      .map((license: any) => (
+                      <TableRow key={license.id} className="border-white/5">
+                        <TableCell className="font-mono font-bold">{license.key}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
+                        {isAdmin && (
+                          <TableCell>
+                            {license.owner?.full_name || <Badge variant="outline">Livre</Badge>}
+                          </TableCell>
+                        )}
+                        <TableCell>{license.uses_remaining}/3</TableCell>
+                        <TableCell>
+                          <Badge variant={license.status === "active" ? "default" : "destructive"}>
+                            {license.status === "active" ? "Ativo" : "Esgotado"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {format(new Date(license.created_at), "dd/MM HH:mm")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => copyToClipboard(license.key)}>
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile View - Licenses Cards */}
+              <div className="md:hidden space-y-4 p-4">
+                {licenses.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma licença encontrada.
+                  </div>
+                ) : licenses
+                  .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
+                  .map((license: any) => (
+                  <Card key={license.id} className="bg-[#0F172A] border-white/5 overflow-hidden">
+                    <CardHeader className="p-4 pb-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono font-bold text-lg">{license.key}</span>
                         <Badge variant={license.status === "active" ? "default" : "destructive"}>
                           {license.status === "active" ? "Ativo" : "Esgotado"}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {format(new Date(license.created_at), "dd/MM HH:mm")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(license.key)}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                      <CardDescription className="truncate text-xs">{license.filename}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-2 space-y-2">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Usos: {license.uses_remaining}/3</span>
+                        <span>{format(new Date(license.created_at), "dd/MM HH:mm")}</span>
+                      </div>
+                      {isAdmin && (
+                        <div className="text-xs">
+                          Dono: {license.owner?.full_name || "Livre"}
+                        </div>
+                      )}
+                      <Button variant="secondary" size="sm" className="w-full mt-2" onClick={() => copyToClipboard(license.key)}>
+                        <Copy className="h-4 w-4 mr-2" /> Copiar Chave
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         {isAdmin && (
           <TabsContent value="resellers" className="mt-6 space-y-6">
-            <div className="grid gap-6 lg:grid-cols-3">
-              <Card className="lg:col-span-1 h-fit bg-[#1E293B] border-white/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5" /> Novo Revendedor
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateReseller} className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Gestão de Acessos</h2>
+              <Dialog open={isResellerModalOpen} onOpenChange={setIsResellerModalOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    <UserPlus className="h-4 w-4 mr-2" /> Novo Revendedor
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px] w-[95vw] bg-[#1E293B] border-white/5 text-white">
+                  <DialogHeader>
+                    <DialogTitle>Cadastrar Novo Revendedor</DialogTitle>
+                    <DialogDescription className="text-slate-400">
+                      Crie uma nova conta de acesso para revendedor ou sub-admin.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateReseller} className="space-y-4 py-4">
                     <div className="space-y-2">
                       <Label>Nome Completo</Label>
                       <Input 
                         value={resellerForm.full_name}
                         onChange={e => setResellerForm({...resellerForm, full_name: e.target.value})}
                         required 
+                        className="bg-[#0F172A] border-white/10"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Telefone</Label>
+                      <Label>Telefone (Login)</Label>
                       <Input 
                         value={resellerForm.phone}
                         onChange={e => setResellerForm({...resellerForm, phone: e.target.value})}
                         placeholder="11921009176" 
                         required 
+                        className="bg-[#0F172A] border-white/10"
                       />
                     </div>
                     <div className="space-y-2">
@@ -498,6 +563,7 @@ function DashboardPage() {
                           value={resellerForm.password}
                           onChange={e => setResellerForm({...resellerForm, password: e.target.value})}
                           required 
+                          className="bg-[#0F172A] border-white/10"
                         />
                         <div className="absolute right-0 top-0 h-full flex items-center pr-2 gap-1">
                           <Button
@@ -533,54 +599,60 @@ function DashboardPage() {
                         </Button>
                       </div>
                     </div>
-
-                      <div className="space-y-2">
-                        <Label>WhatsApp (Suporte)</Label>
-                        <Input 
-                          value={resellerForm.whatsapp}
-                          onChange={e => setResellerForm({...resellerForm, whatsapp: e.target.value})}
-                          placeholder="Ex: 5511999999999" 
-                        />
-                      </div>
-                      <Button type="submit" className="w-full" disabled={isCreatingReseller}>
-                        {isCreatingReseller ? "Cadastrando..." : "Cadastrar"}
+                    <div className="space-y-2">
+                      <Label>WhatsApp (Suporte)</Label>
+                      <Input 
+                        value={resellerForm.whatsapp}
+                        onChange={e => setResellerForm({...resellerForm, whatsapp: e.target.value})}
+                        placeholder="Ex: 5511999999999" 
+                        className="bg-[#0F172A] border-white/10"
+                      />
+                    </div>
+                    <DialogFooter className="pt-4">
+                      <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700" disabled={isCreatingReseller}>
+                        {isCreatingReseller ? "Cadastrando..." : "Confirmar Cadastro"}
                       </Button>
-
+                    </DialogFooter>
                   </form>
-                </CardContent>
-              </Card>
+                </DialogContent>
+              </Dialog>
+            </div>
 
-              <Card className="lg:col-span-2 bg-[#1E293B] border-white/5">
-                <CardHeader>
-                  <CardTitle>Gestão de Acessos</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 sm:p-6 overflow-x-auto">
-                  <Table className="min-w-[650px]">
-
+            {/* Desktop View */}
+            <div className="hidden md:block">
+              <Card className="bg-[#1E293B] border-white/5">
+                <CardContent className="p-0 overflow-x-auto">
+                  <Table className="min-w-[800px]">
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="border-white/5">
                         <TableHead>Revendedor</TableHead>
                         <TableHead>Contato</TableHead>
                         <TableHead>Visto por último</TableHead>
-                        <TableHead>Saldo [Usadas/Total]</TableHead>
+                        <TableHead>Saldo</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {resellers.map((reseller: any) => (
-                        <TableRow key={reseller.id}>
+                      {resellers.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                            Nenhum revendedor cadastrado.
+                          </TableCell>
+                        </TableRow>
+                      ) : resellers.map((reseller: any) => (
+                        <TableRow key={reseller.id} className="border-white/5">
                           <TableCell className="font-medium">{reseller.full_name}</TableCell>
                           <TableCell>
-                            <Button variant="link" className="p-0 h-auto gap-1" onClick={() => openWhatsApp(reseller.phone)}>
+                            <Button variant="link" className="p-0 h-auto gap-1 text-blue-400" onClick={() => openWhatsApp(reseller.phone)}>
                               <MessageSquare className="h-3 w-3" /> {reseller.phone}
                             </Button>
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
+                          <TableCell className="text-xs text-slate-400">
                             {reseller.last_seen ? format(new Date(reseller.last_seen), "dd/MM HH:mm") : "Nunca"}
                           </TableCell>
                           <TableCell>
-                            <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">
+                            <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
                               {reseller.credits || 0} unid.
                             </Badge>
                           </TableCell>
@@ -589,10 +661,10 @@ function DashboardPage() {
                               {reseller.is_blocked ? (
                                 <Badge variant="destructive">Bloqueado</Badge>
                               ) : (
-                                <Badge variant="default" className="bg-green-500/10 text-green-500">Ativo</Badge>
+                                <Badge variant="default" className="bg-green-500/10 text-green-400">Ativo</Badge>
                               )}
                               {reseller.is_admin && (
-                                <Badge variant="outline" className="text-[10px] h-4">Sub-Admin</Badge>
+                                <Badge variant="outline" className="text-[10px] h-4 border-blue-500/30 text-blue-400">Sub-Admin</Badge>
                               )}
                             </div>
                           </TableCell>
@@ -600,27 +672,37 @@ function DashboardPage() {
                             <Button 
                               variant="outline" 
                               size="sm"
+                              className="border-white/10 hover:bg-white/5"
                               onClick={() => {
                                 setTransferData({ ...transferData, resellerId: reseller.id });
                                 setIsTransferOpen(true);
                               }}
                             >
-                              <Send className="h-3 w-3 mr-1" /> Transferir
+                              <Send className="h-3 w-3 mr-1" /> Créditos
                             </Button>
                             <Button 
                               variant="outline" 
                               size="sm"
                               onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                              className={reseller.is_admin ? "text-blue-500" : ""}
+                              className={`border-white/10 hover:bg-white/5 ${reseller.is_admin ? "text-blue-400" : ""}`}
                             >
                               {reseller.is_admin ? "Remover Admin" : "Tornar Admin"}
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="icon"
+                              className="hover:bg-white/5"
                               onClick={() => handleToggleBlock(reseller.id, reseller.is_blocked)}
                             >
                               {reseller.is_blocked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4 text-destructive" />}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteReseller(reseller.id)}
+                            >
+                              <XCircle className="h-4 w-4" />
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -629,6 +711,96 @@ function DashboardPage() {
                   </Table>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Mobile View - Cards */}
+            <div className="md:hidden space-y-4">
+              {resellers.length === 0 ? (
+                <Card className="bg-[#1E293B] border-white/5 p-8 text-center text-slate-500">
+                  Nenhum revendedor cadastrado.
+                </Card>
+              ) : resellers.map((reseller: any) => (
+                <Card key={reseller.id} className="bg-[#1E293B] border-white/5 overflow-hidden">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-lg">{reseller.full_name}</CardTitle>
+                        <CardDescription className="text-blue-400 flex items-center gap-1 mt-1" onClick={() => openWhatsApp(reseller.phone)}>
+                          <Phone className="h-3 w-3" /> {reseller.phone}
+                        </CardDescription>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        {reseller.is_blocked ? (
+                          <Badge variant="destructive">Bloqueado</Badge>
+                        ) : (
+                          <Badge variant="default" className="bg-green-500/10 text-green-400">Ativo</Badge>
+                        )}
+                        {reseller.is_admin && (
+                          <Badge variant="outline" className="text-[10px] h-4 border-blue-500/30 text-blue-400">Sub-Admin</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pb-4 space-y-4">
+                    <div className="flex justify-between items-center text-sm border-t border-white/5 pt-4">
+                      <span className="text-slate-400">Saldo Atual:</span>
+                      <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">
+                        {reseller.credits || 0} unid.
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-slate-500">
+                      <span>Visto por último:</span>
+                      <span>{reseller.last_seen ? format(new Date(reseller.last_seen), "dd/MM HH:mm") : "Nunca"}</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 pt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full border-white/10"
+                        onClick={() => {
+                          setTransferData({ ...transferData, resellerId: reseller.id });
+                          setIsTransferOpen(true);
+                        }}
+                      >
+                        <Send className="h-3 w-3 mr-1" /> + Créditos
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full border-white/10"
+                        onClick={() => openWhatsApp(reseller.phone)}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" /> WhatsApp
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className={`w-full border-white/10 ${reseller.is_blocked ? "text-green-400" : "text-destructive"}`}
+                        onClick={() => handleToggleBlock(reseller.id, reseller.is_blocked)}
+                      >
+                        {reseller.is_blocked ? <><Unlock className="h-3 w-3 mr-1" /> Desbloquear</> : <><Lock className="h-3 w-3 mr-1" /> Bloquear</>}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full border-white/10 text-destructive"
+                        onClick={() => handleDeleteReseller(reseller.id)}
+                      >
+                        <XCircle className="h-3 w-3 mr-1" /> Excluir
+                      </Button>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className={`w-full border border-white/5 text-xs ${reseller.is_admin ? "text-blue-400" : "text-slate-400"}`}
+                      onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                    >
+                      {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         )}
