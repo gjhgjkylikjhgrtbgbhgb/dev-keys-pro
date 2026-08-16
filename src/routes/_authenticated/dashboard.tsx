@@ -594,14 +594,8 @@ function DashboardPage() {
           <TabsTrigger value="resellers" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Revendedores</TabsTrigger>
           {isAdmin && (
             <>
-              <TabsTrigger value="unassigned" className="px-6 py-2 flex items-center gap-2">
-                <Cloud className="h-4 w-4" />
-                {isMaster ? "Configs Livres" : "Minhas Livres"}
-                <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-none px-1.5 py-0 h-5">
-                  {stats.unassigned}
-                </Badge>
-              </TabsTrigger>
               {isMaster && <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>}
+
             </>
           )}
         </TabsList>
@@ -641,6 +635,10 @@ function DashboardPage() {
                       <Upload className="w-4 h-4"/>
                       {isProcessing ? "Enviando..." : "Upload Configs"}
                     </Button>
+                    <p className="text-[10px] text-amber-500 mt-1 max-w-[150px]">
+                      Somente admin pode usar. Se você usar vai tudo pro painel master
+                    </p>
+
                   </>
                 )}
                 <Button 
@@ -943,6 +941,15 @@ function DashboardPage() {
                                   <ShieldAlert className="h-3 w-3 mr-1" />
                                   {reseller.is_admin ? "Remover Sub" : "Tornar Sub"}
                                 </Button>
+                                {isMaster && (
+                                  <Button 
+                                    onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                                    className="w-full py-2 bg-purple-600 text-white rounded text-xs"
+                                  >
+                                    {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
+                                  </Button>
+                                )}
+
                               </>
                             )}
                             <Button 
@@ -1065,8 +1072,15 @@ function DashboardPage() {
                         >
                           {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
                         </Button>
+                        <Button 
+                          onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                          className="w-full py-2 bg-purple-600 text-white rounded text-xs mt-2"
+                        >
+                          {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
+                        </Button>
                       </div>
                     )}
+
                   </CardContent>
                 </Card>
               ))}
