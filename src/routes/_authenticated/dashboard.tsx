@@ -131,9 +131,10 @@ function DashboardPage() {
   // Pegar dados do contexto da rota carregados no loader
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
-  const isMasterAdmin = (currentUser?.phone || "").replace(/\D/g, "") === "11921009176" || currentUser?.is_admin === true;
-  const isAdmin = isMasterAdmin;
-  const isMaster = isMasterAdmin;
+  const MASTER_PHONE = '11921009176';
+  const isMaster = currentUser?.phone?.replace(/\D/g, '') === MASTER_PHONE || currentUser?.is_admin === true;
+  const isMasterAdmin = isMaster;
+  const isAdmin = isMaster;
   const isSubAdmin = false;
 
 
