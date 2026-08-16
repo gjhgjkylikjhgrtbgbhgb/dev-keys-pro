@@ -105,6 +105,7 @@ export const createReseller = createServerFn({ method: "POST" })
     phone: z.string(),
     password: z.string(),
     full_name: z.string(),
+    whatsapp: z.string().optional(),
   }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -136,8 +137,12 @@ export const createReseller = createServerFn({ method: "POST" })
         id: authUser.user.id,
         phone: normalizedPhone,
         full_name,
-        license_inventory: 0
-      });
+        credits: 0,
+        is_blocked: false,
+        is_admin: false,
+        support_whatsapp: data.whatsapp || "",
+        last_seen: new Date().toISOString()
+      } as any);
 
     if (profileError) throw profileError;
 
