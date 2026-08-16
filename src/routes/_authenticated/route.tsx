@@ -1,5 +1,6 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, Outlet } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -8,6 +9,48 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) {
       throw redirect({ to: "/auth" });
     }
-    return { user: data.user };
+    
+    // Identificação imediata do Master Admin no loader para evitar flicker
+    const MASTER_PHONE = "11921009176";
+    const userPhone = (data.user as any).phone?.replace(/\D/g, "") || "";
+    const isActuallyMaster = userPhone === MASTER_PHONE || 
+                            (data.user as any).user_metadata?.phone?.replace(/\D/g, "") === MASTER_PHONE;
+
+    // Buscar perfil e roles antecipadamente
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+
+    const isAdmin = isActuallyMaster || roleData?.role === "admin" || !!(profile as any)?.is_admin;
+
+    return { 
+      user: data.user,
+      profile,
+      isAdmin
+    };
   },
+  component: AuthenticatedLayout,
 });
+
+function AuthenticatedLayout() {
+  const { isAdmin } = Route.useRouteContext();
+
+  if (isAdmin === undefined || isAdmin === null) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center dark">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground animate-pulse">Verificando permissões...</p>
+      </div>
+    );
+  }
+
+  return <Outlet />;
+}
