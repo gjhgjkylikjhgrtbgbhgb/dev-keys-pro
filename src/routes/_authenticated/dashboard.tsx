@@ -524,7 +524,7 @@ function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{resellers.length}</div>
             <p className="text-xs text-muted-foreground">
-              {isMaster ? "Gestão da rede" : "Meus Revendedores"}
+              {isMasterAdmin ? "Gestão da rede" : "Meus Revendedores"}
             </p>
           </CardContent>
         </Card>
