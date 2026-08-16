@@ -1018,10 +1018,10 @@ function DashboardPage() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="w-full border-white/10"
-                        onClick={() => openWhatsApp(reseller.phone)}
+                        className={`w-full border-white/10 ${reseller.can_upload === false ? 'bg-amber-600/20 text-amber-400 border-amber-500/30 hover:bg-amber-600/30' : 'bg-slate-700/50 text-slate-300 border-slate-600 hover:bg-slate-700'}`}
+                        onClick={() => handleToggleUpload(reseller.id, reseller.can_upload)}
                       >
-                        <MessageSquare className="h-3 w-3 mr-1" /> WhatsApp
+                        {reseller.can_upload === false ? '⛔ Upload Bloqueado' : '☁️ Bloquear Upload'}
                       </Button>
                       <Button 
                         variant="outline" 
@@ -1034,7 +1034,15 @@ function DashboardPage() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        className="w-full border-white/10 text-destructive"
+                        className="w-full border-white/10"
+                        onClick={() => openWhatsApp(reseller.phone)}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" /> WhatsApp
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="w-full border-white/10 text-destructive col-span-2"
                         onClick={() => handleDeleteReseller(reseller.id)}
                       >
                         <XCircle className="h-3 w-3 mr-1" /> Excluir
@@ -1049,15 +1057,6 @@ function DashboardPage() {
                           onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
                         >
                           {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className={`w-full border-white/10 ${reseller.can_upload ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}`}
-                          onClick={() => handleToggleUpload(reseller.id, reseller.can_upload)}
-                        >
-                          {reseller.can_upload ? <Lock className="h-3 w-3 mr-1" /> : <Unlock className="h-3 w-3 mr-1" />}
-                          {reseller.can_upload ? "Bloquear Upload" : "Liberar Upload"}
                         </Button>
                       </div>
                     )}

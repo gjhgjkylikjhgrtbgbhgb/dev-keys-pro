@@ -516,10 +516,10 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
     let query = supabaseAdmin.from("licenses").select("*").order("created_at", { ascending: false });
 
     if (isMaster) {
-      // Master vê configs sem dono (estoque global)
-      query = query.is("owner_id", null);
+      // Master vê configs sem dono (estoque global) ou marcadas como livres
+      query = query.or('owner_id.is.null,status.eq.active');
     } else {
-      // Sub-Admin vê suas próprias configs que ainda não repassou (são 'livres' para ele repassar)
+      // Sub-Admin vê suas próprias configs que ainda não repassou
       query = query.eq("owner_id", user.id).eq("status", "active");
     }
 
