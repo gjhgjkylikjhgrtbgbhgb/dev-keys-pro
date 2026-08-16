@@ -95,6 +95,7 @@ function DashboardPage() {
   
   // Pegar dados do layout pai (_authenticated/route.tsx)
   const { profile: currentUser, isAdmin } = Route.useRouteContext() as any;
+
   const updateLastSeenFn = useServerFn(updateLastSeen);
 
   const createLicensesFn = useServerFn(createLicenses);
