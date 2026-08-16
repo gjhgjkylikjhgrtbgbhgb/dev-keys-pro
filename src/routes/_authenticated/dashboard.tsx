@@ -449,7 +449,15 @@ function DashboardPage() {
                         required 
                       />
                     </div>
-                    <Button type="submit" className="w-full">Cadastrar</Button>
+                      <div className="space-y-2">
+                        <Label>WhatsApp (Suporte)</Label>
+                        <Input 
+                          value={resellerForm.whatsapp}
+                          onChange={e => setResellerForm({...resellerForm, whatsapp: e.target.value})}
+                          placeholder="Ex: 5511999999999" 
+                        />
+                      </div>
+                      <Button type="submit" className="w-full">Cadastrar</Button>
                   </form>
                 </CardContent>
               </Card>
