@@ -82,21 +82,22 @@ export const getResellers = createServerFn({ method: "GET" })
     
     const MASTER_PHONE = "+5511921009176";
     
-    const { data: roles, error: rolesError } = await supabase
+    const { data: profiles, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .neq("phone", MASTER_PHONE);
+
+    if (error) throw error;
+    
+    // Filtramos apenas aqueles que têm a role 'reseller' no user_roles
+    const { data: roles } = await supabase
       .from("user_roles")
       .select("user_id")
       .eq("role", "reseller");
-
-    if (rolesError) throw rolesError;
-
-    const ids = (roles || []).map(r => r.user_id);
-    if (ids.length === 0) return [];
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .in("id", ids)
-      .neq("phone", MASTER_PHONE);
+    
+    const resellerIds = new Set((roles || []).map(r => r.user_id));
+    
+    return (profiles || []).filter(p => resellerIds.has(p.id));
 
     if (error) throw error;
     return data || [];
@@ -149,42 +150,64 @@ export const createReseller = createServerFn({ method: "POST" })
       normalizedPhone = `+55${normalizedPhone.replace(/\D/g, "")}`;
     }
 
-    // Tenta encontrar se já existe para dar erro amigável
+    // Tenta encontrar se já existe para dar erro amigável ou vincular perfil
     const { data: existingProfiles } = await supabaseAdmin
       .from("profiles")
-      .select("id")
+      .select("id, phone")
       .eq("phone", normalizedPhone)
       .maybeSingle();
 
+    let userId: string;
+
     if (existingProfiles) {
-      throw new Error("Já existe um revendedor com este telefone");
-    }
+      userId = existingProfiles.id;
+      console.log("Vínculo de perfil existente para:", normalizedPhone);
+    } else {
+      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        phone: normalizedPhone,
+        password: password,
+        phone_confirm: true,
+        user_metadata: { full_name, whatsapp }
+      });
 
-    const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      phone: normalizedPhone,
-      password: password,
-      phone_confirm: true,
-      user_metadata: { full_name, whatsapp }
-    });
-
-    if (authError) {
-      if (authError.message.includes("already registered")) {
-        throw new Error("Este telefone já está registrado no sistema");
+      if (authError) {
+        if (authError.message.includes("already registered")) {
+          // Se o Auth User existe mas o perfil não, tentamos pegar o ID pelo phone (se possível via admin)
+          const { data: listUsers } = await supabaseAdmin.auth.admin.listUsers();
+          const foundUser = listUsers.users.find(u => u.phone === normalizedPhone);
+          if (foundUser) {
+            userId = foundUser.id;
+          } else {
+            throw new Error("Este telefone já está registrado no sistema auth, mas o perfil não pôde ser recuperado.");
+          }
+        } else {
+          throw authError;
+        }
+      } else {
+        userId = authUser.user.id;
       }
-      throw authError;
     }
 
-
-    const { error: roleError } = await supabaseAdmin
+    // Garante a role de reseller
+    const { data: existingRole } = await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: authUser.user.id, role: "reseller" });
+      .select("id")
+      .eq("user_id", userId)
+      .eq("role", "reseller")
+      .maybeSingle();
 
-    if (roleError) throw roleError;
+    if (!existingRole) {
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .upsert({ user_id: userId, role: "reseller" }, { onConflict: 'user_id,role' });
+      if (roleError) throw roleError;
+    }
 
+    // Garante o perfil completo (upsert)
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .insert({
-        id: authUser.user.id,
+      .upsert({
+        id: userId,
         phone: normalizedPhone,
         full_name,
         credits: 0,
@@ -192,7 +215,7 @@ export const createReseller = createServerFn({ method: "POST" })
         is_admin: false,
         support_whatsapp: data.whatsapp || "",
         last_seen: new Date().toISOString()
-      } as any);
+      }, { onConflict: 'id' });
 
     if (profileError) throw profileError;
 
