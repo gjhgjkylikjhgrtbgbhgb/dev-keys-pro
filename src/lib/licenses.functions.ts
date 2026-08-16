@@ -20,36 +20,54 @@ export const getLicenseStats = createServerFn({ method: "GET" })
     ].map(v => String(v).replace(/\D/g, ""));
     const isMaster = identifiers.includes(MASTER_PHONE);
 
+    // Buscar perfil para verificar se é admin
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("is_admin, credits")
+      .eq("id", user.id)
+      .single();
+
+    const isAdmin = isMaster || profile?.is_admin;
+
     // Contagens para os cards
-    const { count: total, error: totalError } = await supabaseAdmin
-      .from("licenses")
-      .select("*", { count: "exact", head: true });
+    let totalCount = 0;
+    let activeCount = 0;
+    let assignedCount = 0;
+    let unassignedCount = 0;
 
-    const { count: active, error: activeError } = await supabaseAdmin
-      .from("licenses")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "active");
+    if (isMaster) {
+      // Master vê tudo
+      const { count: total } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true });
+      const { count: active } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).eq("status", "active");
+      const { count: assigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).not("owner_id", "is", null);
+      const { count: unassigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).is("owner_id", null);
+      
+      totalCount = total || 0;
+      activeCount = active || 0;
+      assignedCount = assigned || 0;
+      unassignedCount = unassigned || 0;
+    } else if (isAdmin) {
+      // Sub-Admin vê apenas o que é dele ou de seus revendedores
+      // 1. Configs Livres dele
+      const { count: unassigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).eq("owner_id", user.id).eq("status", "active");
+      unassignedCount = unassigned || 0;
 
-    // Novos cards: Repassadas (user_id IS NOT NULL) e Livres (user_id IS NULL)
-    const { count: assigned, error: assignedError } = await supabaseAdmin
-      .from("licenses")
-      .select("*", { count: "exact", head: true })
-      .not("owner_id", "is", null);
-
-    const { count: unassigned, error: unassignedError } = await supabaseAdmin
-      .from("licenses")
-      .select("*", { count: "exact", head: true })
-      .is("owner_id", null);
-
-    if (totalError || activeError || assignedError || unassignedError) {
-      throw new Error("Falha ao buscar estatísticas");
+      // 2. Licenças Repassadas (estão com revendedores que ele cadastrou)
+      const { data: myResellers } = await supabaseAdmin.from("profiles").select("id").eq("parent_id", user.id);
+      const resellerIds = (myResellers || []).map(r => r.id);
+      
+      if (resellerIds.length > 0) {
+        const { count: assigned } = await supabaseAdmin.from("licenses").select("*", { count: "exact", head: true }).in("owner_id", resellerIds);
+        assignedCount = assigned || 0;
+      }
     }
 
     return {
-      total: total || 0,
-      active: active || 0,
-      assigned: assigned || 0,
-      unassigned: unassigned || 0,
+      total: totalCount,
+      active: activeCount,
+      assigned: assignedCount,
+      unassigned: unassignedCount,
+      credits: profile?.credits || 0
     };
   });
 
@@ -482,28 +500,30 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autorizado");
 
-    // Somente Admins podem ver configs livres
     const MASTER_PHONE = "11921009176";
     const userPhone = user.phone?.replace(/\D/g, "") || "";
+    const isMaster = userPhone === MASTER_PHONE;
     
-    // Buscar perfil para ver se é admin
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("is_admin")
       .eq("id", user.id)
       .single();
 
-    const isMaster = userPhone === MASTER_PHONE;
     const isAdmin = isMaster || profile?.is_admin;
-
     if (!isAdmin) throw new Error("Acesso negado");
 
-    const { data, error } = await supabaseAdmin
-      .from("licenses")
-      .select("*")
-      .is("owner_id", null)
-      .order("created_at", { ascending: false });
+    let query = supabaseAdmin.from("licenses").select("*").order("created_at", { ascending: false });
 
+    if (isMaster) {
+      // Master vê configs sem dono (estoque global)
+      query = query.is("owner_id", null);
+    } else {
+      // Sub-Admin vê suas próprias configs que ainda não repassou (são 'livres' para ele repassar)
+      query = query.eq("owner_id", user.id).eq("status", "active");
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   });
@@ -516,9 +536,27 @@ export const assignLicense = createServerFn({ method: "POST" })
   }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { supabase } = context;
     const { licenseId, resellerId } = data;
 
-    // 1. Vincular licença
+    const { data: { user: sender } } = await supabase.auth.getUser();
+    if (!sender) throw new Error("Não autorizado");
+
+    const MASTER_PHONE = "11921009176";
+    const userPhone = sender.phone?.replace(/\D/g, "") || "";
+    const isMaster = userPhone === MASTER_PHONE;
+
+    const { data: license } = await supabaseAdmin
+      .from("licenses")
+      .select("*")
+      .eq("id", licenseId)
+      .single();
+
+    if (!license) throw new Error("Licença não encontrada");
+    if (!isMaster && license.owner_id !== sender.id) {
+      throw new Error("Você não tem permissão para atribuir esta licença");
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from("licenses")
       .update({ owner_id: resellerId })
@@ -526,13 +564,18 @@ export const assignLicense = createServerFn({ method: "POST" })
 
     if (updateError) throw updateError;
 
-    // 2. Incrementar créditos do revendedor
-    const { error: rpcError } = await supabaseAdmin.rpc("increment_credits", {
-      row_id: resellerId,
-      amount: 1
-    });
-
-    if (rpcError) throw rpcError;
+    if (!isMaster) {
+      await supabaseAdmin.rpc("transfer_credits_safe", {
+        sender_id: sender.id,
+        receiver_id: resellerId,
+        transfer_amount: 1
+      });
+    } else {
+      await supabaseAdmin.rpc("increment_credits", {
+        row_id: resellerId,
+        amount: 1
+      });
+    }
 
     return { success: true };
   });
