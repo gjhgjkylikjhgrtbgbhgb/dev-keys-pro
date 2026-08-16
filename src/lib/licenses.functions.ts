@@ -528,7 +528,7 @@ export const assignLicense = createServerFn({ method: "POST" })
 
     // 2. Incrementar créditos do revendedor
     const { error: rpcError } = await supabaseAdmin.rpc("increment_credits", {
-      user_id: resellerId,
+      row_id: resellerId,
       amount: 1
     });
 
