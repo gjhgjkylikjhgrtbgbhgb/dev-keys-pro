@@ -143,6 +143,8 @@ function DashboardPage() {
   const toggleAdminFn = useServerFn(toggleAdminStatus);
   const deleteExhaustedFn = useServerFn(deleteExhaustedLicenses);
   const deleteResellerFn = useServerFn(deleteReseller);
+  const assignLicenseFn = useServerFn(assignLicense);
+  const deleteLicenseFn = useServerFn(deleteLicense);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "", credits: 0 });
@@ -151,6 +153,9 @@ function DashboardPage() {
   const [showResellerPassword, setShowResellerPassword] = useState(false);
   const [isCreatingReseller, setIsCreatingReseller] = useState(false);
   const [isResellerModalOpen, setIsResellerModalOpen] = useState(false);
+  const [assignData, setAssignData] = useState({ licenseId: "", resellerId: "" });
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
 
   // Fallback data para evitar quebras se a query retornar undefined/null
