@@ -14,7 +14,8 @@ import {
   deleteReseller,
   getUnassignedLicenses,
   assignLicense,
-  deleteLicense
+  deleteLicense,
+  updateUploadPermission
 } from "@/lib/licenses.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -147,6 +148,7 @@ function DashboardPage() {
   const deleteResellerFn = useServerFn(deleteReseller);
   const assignLicenseFn = useServerFn(assignLicense);
   const deleteLicenseFn = useServerFn(deleteLicense);
+  const updateUploadPermissionFn = useServerFn(updateUploadPermission);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -411,6 +413,16 @@ function DashboardPage() {
     }
   };
 
+  const handleToggleUpload = async (userId: string, currentStatus: boolean) => {
+    try {
+      await updateUploadPermissionFn({ data: { userId, canUpload: !currentStatus } });
+      toast.success(!currentStatus ? "Upload liberado!" : "Upload bloqueado!");
+      await resellersQuery.refetch();
+    } catch (error) {
+      toast.error("Erro ao alterar permissão de upload.");
+    }
+  };
+
   const filteredUnassigned = (unassignedQuery.data || []).filter((l: any) => 
     l.key.includes(searchTerm) || l.filename.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -599,7 +611,7 @@ function DashboardPage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                {isMaster && (
+                {(isAdmin || currentUser?.can_upload) && (
                   <>
                     <input
                       type="file"
@@ -847,6 +859,7 @@ function DashboardPage() {
                         <TableHead>Visto por último</TableHead>
                         <TableHead>Saldo</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Upload</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -884,6 +897,11 @@ function DashboardPage() {
                                 <Badge variant="outline" className="text-[10px] h-4 border-blue-500/30 text-blue-400">Sub-Admin</Badge>
                               )}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={reseller.can_upload ? "default" : "secondary"} className={reseller.can_upload ? "bg-green-500/10 text-green-400" : ""}>
+                              {reseller.can_upload ? "Liberado" : "Bloqueado"}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button 

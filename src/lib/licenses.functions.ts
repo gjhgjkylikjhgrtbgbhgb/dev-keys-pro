@@ -23,7 +23,7 @@ export const getLicenseStats = createServerFn({ method: "GET" })
     // Buscar perfil para verificar se é admin
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("is_admin, credits")
+      .select("is_admin, credits, can_upload")
       .eq("id", user.id)
       .single();
 
@@ -577,6 +577,23 @@ export const assignLicense = createServerFn({ method: "POST" })
       });
     }
 
+    return { success: true };
+  });
+
+export const updateUploadPermission = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: any) => z.object({
+    userId: z.string(),
+    canUpload: z.boolean(),
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .update({ can_upload: data.canUpload })
+      .eq("id", data.userId);
+
+    if (error) throw error;
     return { success: true };
   });
 
