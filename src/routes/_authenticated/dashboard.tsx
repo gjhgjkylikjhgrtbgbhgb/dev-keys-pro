@@ -168,6 +168,7 @@ function DashboardPage() {
         toast.success(`${itemsToInsert.length} licenças geradas com sucesso!`);
         await licensesQuery.refetch();
         await statsQuery.refetch();
+      }
     } catch (error: any) {
       console.error("Erro exato do upload:", error);
       const errorMsg = error?.message || "Erro desconhecido durante o upload";
