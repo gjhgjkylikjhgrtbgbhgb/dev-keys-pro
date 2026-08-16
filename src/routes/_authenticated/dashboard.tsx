@@ -1076,33 +1076,38 @@ function DashboardPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="upload" className="mt-6">
-          {!isMaster && (
-            <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center mb-6">
-              <ShieldAlert className="mx-auto h-12 w-12 mb-4" />
-              <h2 className="text-xl font-bold">Acesso Restrito</h2>
-              <p>Apenas o administrador master pode gerar novas licenças no sistema.</p>
-            </div>
-          )}
-          <Card className={`bg-card border-border ${!isMaster ? 'opacity-50 pointer-events-none' : ''}`}>
-            <CardHeader>
-              <CardTitle>Upload em Lote</CardTitle>
-              <CardDescription>Apenas o Admin Master pode gerar novas licenças para o estoque geral.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
-                  isDragActive ? "border-primary bg-primary/10" : "border-border hover:bg-accent/50"
-                }`}
-              >
-                <input {...getInputProps()} />
-                <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                {isProcessing ? <p>Processando...</p> : <p>Solte qualquer arquivo aqui (máx 212 KB)</p>}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {isMaster && (
+          <TabsContent value="upload" className="mt-6">
+            <Card className="bg-[#1E293B] border-white/5">
+              <CardHeader>
+                <CardTitle>Upload de Configs / Importar em Lote</CardTitle>
+                <CardDescription>Apenas o Admin Master pode gerar novas licenças para o estoque geral.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div
+                  {...getRootProps()}
+                  className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors ${
+                    isDragActive ? "border-blue-500 bg-blue-500/10" : "border-white/10 hover:bg-white/5"
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  {isProcessing ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
+                      <p>Processando arquivos...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-lg font-medium">Arraste e solte múltiplos arquivos aqui</p>
+                      <p className="text-sm text-muted-foreground">ou clique para selecionar (máx 212 KB por arquivo)</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
