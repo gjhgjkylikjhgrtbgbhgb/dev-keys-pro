@@ -391,7 +391,9 @@ function DashboardPage() {
                         Nenhuma licença encontrada.
                       </TableCell>
                     </TableRow>
-                  ) : licenses.map((license: any) => (
+                  ) : licenses
+                    .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
+                    .map((license: any) => (
                     <TableRow key={license.id}>
                       <TableCell className="font-mono font-bold">{license.key}</TableCell>
                       <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
