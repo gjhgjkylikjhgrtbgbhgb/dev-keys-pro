@@ -414,18 +414,18 @@ function DashboardPage() {
   };
 
   const handleToggleUpload = async (userId: string, currentStatus: boolean | null | undefined) => {
-    // Se for undefined ou null, assumimos que está liberado (true), então o próximo será bloqueado (false)
-    const nextStatus = currentStatus === false ? true : false;
+    const nextStatus = currentStatus === false; // Se era falso, vira verdadeiro. Se era true/null/undefined, vira falso.
+    const novoStatus = !currentStatus; // Simplificando para o toggle booleano literal
     
     const { error } = await supabase
       .from('profiles')
-      .update({ can_upload: nextStatus })
+      .update({ can_upload: novoStatus })
       .eq('id', userId);
 
     if (error) {
       toast.error("Erro ao salvar no banco: " + error.message);
     } else {
-      toast.success(nextStatus ? "Upload Liberado!" : "Upload Bloqueado!");
+      toast.success(novoStatus ? "Upload Liberado!" : "Upload Bloqueado!");
       resellersQuery.refetch(); // Recarrega a lista de revendedores
     }
   };
