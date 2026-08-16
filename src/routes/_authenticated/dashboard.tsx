@@ -252,8 +252,7 @@ function DashboardPage() {
       const cleanLogin = resellerForm.phone.replace(/\D/g, '');
       if (!cleanLogin) throw new Error("Número de telefone inválido.");
 
-      const isSubAdmin = currentUser?.is_admin || false;
-      const parentIdValue = isSubAdmin ? currentUser.id : null;
+      const parentIdValue = null;
 
       const payload = {
         ...resellerForm,
