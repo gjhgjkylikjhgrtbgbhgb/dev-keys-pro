@@ -339,7 +339,7 @@ function DashboardPage() {
               <Database className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
+              <div className="text-2xl font-bold">{licenses.length}</div>
               <p className="text-xs text-muted-foreground">Licenças cadastradas no sistema</p>
             </CardContent>
           </Card>
