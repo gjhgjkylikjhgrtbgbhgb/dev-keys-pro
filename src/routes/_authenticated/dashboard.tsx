@@ -93,17 +93,18 @@ function DashboardPage() {
   const licensesQuery = useSuspenseQuery(licensesQueryOptions);
   const resellersQuery = useSuspenseQuery(resellersQueryOptions);
   
+  // Pegar dados do layout pai (_authenticated/route.tsx)
+  const { profile: currentUser, isAdmin } = Route.useRouteContext() as any;
+  const updateLastSeenFn = useServerFn(updateLastSeen);
+
   const createLicensesFn = useServerFn(createLicenses);
   const createResellerFn = useServerFn(createReseller);
   const updateStatusFn = useServerFn(updateProfileStatus);
   const transferFn = useServerFn(transferLicenses);
   const toggleAdminFn = useServerFn(toggleAdminStatus);
-  const updateLastSeenFn = useServerFn(updateLastSeen);
   const deleteExhaustedFn = useServerFn(deleteExhaustedLicenses);
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "" });
   const [transferData, setTransferData] = useState({ resellerId: "", amount: 1 });
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -113,38 +114,11 @@ function DashboardPage() {
   const licenses = licensesQuery.data || [];
   const resellers = resellersQuery.data || [];
 
-  // Verificar se o usuário é admin
-  useSuspenseQuery({
-    queryKey: ["current-user-data"],
-    queryFn: async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .maybeSingle();
-            
-          setCurrentUser(profile);
-          
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", session.user.id)
-            .maybeSingle();
-            
-          setIsAdmin(roleData?.role === "admin" || !!(profile as any)?.is_admin);
-          
-          // Atualiza last_seen
-          updateLastSeenFn();
-        }
-      } catch (err) {
-        console.error("Erro ao verificar admin:", err);
-      }
-      return true;
-    }
+  // Atualiza last_seen apenas uma vez no dashboard
+  useState(() => {
+    updateLastSeenFn();
   });
+
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
