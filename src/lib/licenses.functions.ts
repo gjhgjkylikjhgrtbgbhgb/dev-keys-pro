@@ -512,7 +512,7 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
       .single();
 
     const isAdmin = isMaster || profile?.is_admin;
-    if (!isAdmin) throw new Error("Acesso negado");
+    if (!isAdmin) return [];
 
     let query = supabaseAdmin.from("licenses").select("*").order("created_at", { ascending: false });
 
