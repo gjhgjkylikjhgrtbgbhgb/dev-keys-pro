@@ -213,7 +213,7 @@ function DashboardPage() {
     try {
       await createResellerFn({ data: resellerForm });
       toast.success("Revendedor cadastrado!");
-      setResellerForm({ phone: "", password: "", full_name: "" });
+      setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "" });
       window.location.reload();
     } catch (error) {
       toast.error("Erro ao cadastrar revendedor.");
@@ -238,6 +238,26 @@ function DashboardPage() {
       window.location.reload();
     } catch (error: any) {
       toast.error(error.message || "Erro na transferência.");
+    }
+  };
+
+  const handleToggleAdmin = async (userId: string, currentAdmin: boolean) => {
+    try {
+      await toggleAdminFn({ data: { userId, isAdmin: !currentAdmin } });
+      toast.success(!currentAdmin ? "Promovido a Admin!" : "Removido status de Admin!");
+      window.location.reload();
+    } catch (error) {
+      toast.error("Erro ao alterar privilégios.");
+    }
+  };
+
+  const handleDeleteExhausted = async () => {
+    try {
+      await deleteExhaustedFn();
+      toast.success("Licenças esgotadas removidas!");
+      window.location.reload();
+    } catch (error) {
+      toast.error("Erro ao remover licenças.");
     }
   };
 
