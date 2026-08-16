@@ -192,7 +192,10 @@ function DashboardPage() {
           itemsToInsert.push({
             key,
             filename: file.name,
-            content: fileText
+            content: fileText,
+            uses_remaining: 3,
+            status: "active",
+            owner_id: null
           });
         } catch (fileError: any) {
           console.error(`Erro ao ler arquivo ${file.name}:`, fileError);
@@ -203,17 +206,18 @@ function DashboardPage() {
       if (itemsToInsert.length > 0) {
         const { error: insertError } = await supabase
           .from("licenses")
-          .insert(itemsToInsert.map(l => ({
-            ...l,
-            uses_remaining: 3,
-            status: "active"
-          })));
+          .insert(itemsToInsert);
 
         if (insertError) throw insertError;
 
-        toast.success(`${itemsToInsert.length} licenças geradas com sucesso!`);
-        await licensesQuery.refetch();
-        await statsQuery.refetch();
+        toast.success(`${itemsToInsert.length} arquivos importados com sucesso!`);
+        
+        // Refetch de tudo para sincronizar
+        await Promise.all([
+          licensesQuery.refetch(),
+          statsQuery.refetch(),
+          unassignedQuery.refetch()
+        ]);
       }
     } catch (error: any) {
       console.error("Erro exato do upload:", error);
@@ -222,7 +226,7 @@ function DashboardPage() {
     } finally {
       setIsProcessing(false);
     }
-  }, [createLicensesFn]);
+  }, [supabase, licensesQuery, statsQuery, unassignedQuery]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
