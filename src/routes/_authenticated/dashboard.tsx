@@ -42,7 +42,7 @@ const statsQueryOptions = queryOptions({
       return await getLicenseStats();
     } catch (error) {
       console.error("Stats error:", error);
-      return { total: 0, active: 0 };
+      return { total: 0, active: 0, assigned: 0, unassigned: 0 };
     }
   },
 });
@@ -136,7 +136,7 @@ function DashboardPage() {
 
 
   // Fallback data para evitar quebras se a query retornar undefined/null
-  const stats = statsQuery.data || { total: 0, active: 0 };
+  const stats = statsQuery.data || { total: 0, active: 0, assigned: 0, unassigned: 0 };
   const licenses = licensesQuery.data || [];
   const resellers = resellersQuery.data || [];
 
@@ -215,13 +215,32 @@ function DashboardPage() {
     
     setIsCreatingReseller(true);
     try {
-      await createResellerFn({ data: resellerForm });
+      const cleanLogin = resellerForm.phone.replace(/\D/g, '');
+      if (!cleanLogin) throw new Error("Número de telefone inválido.");
+
+      const isSubAdmin = currentUser?.is_admin || false;
+      const parentIdValue = isSubAdmin ? currentUser.id : null;
+
+      const payload = {
+        ...resellerForm,
+        phone: cleanLogin,
+        credits: Number(resellerForm.credits) || 0,
+        parent_id: parentIdValue
+      };
+
+      await createResellerFn({ data: payload });
+      
       toast.success("Revendedor cadastrado com sucesso!");
       setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "", credits: 0 });
       setShowResellerPassword(false);
       setIsResellerModalOpen(false);
-      await resellersQuery.refetch();
-      await statsQuery.refetch();
+      
+      // Refetch imediato
+      await Promise.all([
+        resellersQuery.refetch(),
+        statsQuery.refetch(),
+        licensesQuery.refetch()
+      ]);
     } catch (error: any) {
       console.error("Erro ao cadastrar revendedor:", error);
       toast.error(error.message || "Erro ao cadastrar revendedor.");
@@ -347,31 +366,55 @@ function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
         {isAdmin && (
-          <Card className="bg-[#1E293B] border-white/5">
+          <>
+            <Card className="bg-[#1E293B] border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Estoque Geral</CardTitle>
+                <Database className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total}</div>
+                <p className="text-xs text-muted-foreground">Licenças no sistema</p>
+              </CardContent>
+            </Card>
 
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Estoque Geral</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{licenses.length}</div>
-              <p className="text-xs text-muted-foreground">Licenças cadastradas no sistema</p>
-            </CardContent>
-          </Card>
+            <Card className="bg-[#1E293B] border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Repassadas</CardTitle>
+                <Send className="h-4 w-4 text-blue-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.assigned}</div>
+                <p className="text-xs text-muted-foreground">Em posse de revendedores</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#1E293B] border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Configs Livres</CardTitle>
+                <Unlock className="h-4 w-4 text-green-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.unassigned}</div>
+                <p className="text-xs text-muted-foreground">Disponíveis em estoque</p>
+              </CardContent>
+            </Card>
+          </>
         )}
+        
         <Card className="bg-[#1E293B] border-white/5">
-
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Meus Créditos</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{currentUser?.credits || 0}</div>
-            <p className="text-xs text-muted-foreground">Disponíveis para uso</p>
+            <p className="text-xs text-muted-foreground">Saldo atual disponível</p>
           </CardContent>
         </Card>
+
         <Card className="bg-[#1E293B] border-white/5">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Revendedores</CardTitle>
@@ -380,7 +423,7 @@ function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{resellers.length}</div>
             <p className="text-xs text-muted-foreground">
-              {isAdmin ? "Gestão de Sub-Admins e Revendedores" : "Seus revendedores vinculados"}
+              {isAdmin ? "Gestão da rede" : "Seus vinculados"}
             </p>
           </CardContent>
         </Card>

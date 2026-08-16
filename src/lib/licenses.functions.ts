@@ -5,24 +5,51 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const getLicenseStats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase } = context;
 
-    const { count: total, error: totalError } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autorizado");
+
+    // Master vê tudo; Revendedor vê apenas as suas
+    const MASTER_PHONE = "11921009176";
+    const identifiers = [
+      user.phone || "",
+      (user.user_metadata as any)?.phone || "",
+      (user.email || "").split("@")[0] || "",
+    ].map(v => String(v).replace(/\D/g, ""));
+    const isMaster = identifiers.includes(MASTER_PHONE);
+
+    // Contagens para os cards
+    const { count: total, error: totalError } = await supabaseAdmin
       .from("licenses")
       .select("*", { count: "exact", head: true });
 
-    const { count: active, error: activeError } = await supabase
+    const { count: active, error: activeError } = await supabaseAdmin
       .from("licenses")
       .select("*", { count: "exact", head: true })
       .eq("status", "active");
 
-    if (totalError || activeError) {
+    // Novos cards: Repassadas (user_id IS NOT NULL) e Livres (user_id IS NULL)
+    const { count: assigned, error: assignedError } = await supabaseAdmin
+      .from("licenses")
+      .select("*", { count: "exact", head: true })
+      .not("owner_id", "is", null);
+
+    const { count: unassigned, error: unassignedError } = await supabaseAdmin
+      .from("licenses")
+      .select("*", { count: "exact", head: true })
+      .is("owner_id", null);
+
+    if (totalError || activeError || assignedError || unassignedError) {
       throw new Error("Falha ao buscar estatísticas");
     }
 
     return {
       total: total || 0,
       active: active || 0,
+      assigned: assigned || 0,
+      unassigned: unassigned || 0,
     };
   });
 
@@ -194,18 +221,20 @@ export const createReseller = createServerFn({ method: "POST" })
     full_name: z.string(),
     whatsapp: z.string().optional(),
     credits: z.number().optional(),
+    parent_id: z.string().nullable().optional(),
   }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase } = context;
-    const { phone, password, full_name, whatsapp, credits = 0 } = data;
+    const { phone, password, full_name, whatsapp, credits = 0, parent_id = null } = data;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autorizado");
 
     const userPhone = user.phone?.replace(/\D/g, "") || "";
     const isMaster = userPhone === "11921009176";
-    const parentId = isMaster ? null : user.id;
+    // Usar o parent_id vindo do frontend ou decidir pelo contexto
+    const finalParentId = parent_id !== undefined ? parent_id : (isMaster ? null : user.id);
 
     if (!phone || !password || !full_name) {
       throw new Error("Campos obrigatórios ausentes");
@@ -252,7 +281,7 @@ export const createReseller = createServerFn({ method: "POST" })
         is_blocked: false,
         is_admin: false,
         support_whatsapp: whatsapp || "",
-        parent_id: parentId,
+        parent_id: finalParentId,
         last_seen: new Date().toISOString()
       } as any, { onConflict: 'id' });
 
