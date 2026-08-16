@@ -49,6 +49,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          can_upload: boolean | null
           created_at: string | null
           credits: number | null
           full_name: string | null
@@ -62,6 +63,7 @@ export type Database = {
           support_whatsapp: string | null
         }
         Insert: {
+          can_upload?: boolean | null
           created_at?: string | null
           credits?: number | null
           full_name?: string | null
@@ -75,6 +77,7 @@ export type Database = {
           support_whatsapp?: string | null
         }
         Update: {
+          can_upload?: boolean | null
           created_at?: string | null
           credits?: number | null
           full_name?: string | null
