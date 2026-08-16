@@ -93,8 +93,11 @@ function DashboardPage() {
   const licensesQuery = useSuspenseQuery(licensesQueryOptions);
   const resellersQuery = useSuspenseQuery(resellersQueryOptions);
   
-  // Pegar dados do contexto da rota (via useRouteContext ou loader context)
-  const { profile: currentUser, isAdmin } = Route.useRouteContext() as any;
+  // Pegar dados do contexto da rota carregados no loader
+  const context = Route.useRouteContext() as any;
+  const currentUser = context.profile;
+  const isAdmin = context.isAdmin;
+
 
 
   const updateLastSeenFn = useServerFn(updateLastSeen);
