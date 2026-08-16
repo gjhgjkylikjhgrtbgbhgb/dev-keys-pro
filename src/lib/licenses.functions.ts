@@ -29,12 +29,31 @@ export const getLicenseStats = createServerFn({ method: "GET" })
 export const getLicenses = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase } = context;
-    const { data, error } = await supabase
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Não autorizado");
+
+    const MASTER_PHONE = "11921009176";
+    const identifiers = [
+      user.phone || "",
+      (user.user_metadata as any)?.phone || "",
+      (user.email || "").split("@")[0] || "",
+    ].map(v => String(v).replace(/\D/g, ""));
+    const isMaster = identifiers.includes(MASTER_PHONE);
+
+    let query = supabaseAdmin
       .from("licenses")
       .select("*")
       .order("created_at", { ascending: false });
 
+    // Master vê tudo; qualquer outro usuário (sub-admin ou revendedor) vê apenas as suas
+    if (!isMaster) {
+      query = query.eq("owner_id", user.id);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     const licenses = data || [];
 
@@ -42,7 +61,7 @@ export const getLicenses = createServerFn({ method: "GET" })
     let ownersMap = new Map<string, { full_name: string | null }>();
 
     if (ownerIds.length > 0) {
-      const { data: owners } = await supabase
+      const { data: owners } = await supabaseAdmin
         .from("profiles")
         .select("id, full_name")
         .in("id", ownerIds);
@@ -54,6 +73,7 @@ export const getLicenses = createServerFn({ method: "GET" })
       owner: l.owner_id ? ownersMap.get(l.owner_id) ?? null : null,
     }));
   });
+
 
 export const createLicenses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -78,41 +98,45 @@ export const createLicenses = createServerFn({ method: "POST" })
 export const getResellers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { supabase } = context;
-    
-    const MASTER_PHONE = "+5511921009176";
+
     const { data: { user } } = await supabase.auth.getUser();
-    
     if (!user) throw new Error("Não autorizado");
 
-    // Identifica se é o Master Admin pelo telefone
-    const userPhone = user.phone?.replace(/\D/g, "") || "";
-    const isMaster = userPhone === "11921009176";
+    const MASTER_PHONE = "11921009176";
+    const identifiers = [
+      user.phone || "",
+      (user.user_metadata as any)?.phone || "",
+      (user.email || "").split("@")[0] || "",
+    ].map(v => String(v).replace(/\D/g, ""));
+    const isMaster = identifiers.includes(MASTER_PHONE);
 
-    let query = supabase.from("profiles").select("*");
+    // Usamos o client admin para garantir a leitura completa (evita bloqueio de RLS),
+    // mas o escopo é decidido no servidor conforme a hierarquia do usuário.
+    let query = supabaseAdmin
+      .from("profiles")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (isMaster) {
-      // Master vê todos (exceto ele mesmo)
-      query = query.neq("phone", MASTER_PHONE);
+      // Master vê todos, exceto ele mesmo
+      query = query.neq("id", user.id);
     } else {
-      // Sub-Admin vê apenas seus filhos
+      // Sub-Admin vê apenas seus vinculados
       query = query.eq("parent_id", user.id);
     }
 
-    const { data: profiles, error: profileError } = await query;
+    const { data: profiles, error } = await query;
+    if (error) throw error;
 
-    if (profileError) throw profileError;
-    
-    // Filtramos apenas aqueles que têm a role 'reseller' no user_roles
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "reseller");
-    
-    const resellerIds = new Set((roles || []).map(r => r.user_id));
-    
-    return (profiles || []).filter(p => resellerIds.has(p.id));
+    // Nunca expor o Master Admin na listagem
+    return (profiles || []).filter(p => {
+      const phone = (p.phone || "").replace(/\D/g, "");
+      return phone !== MASTER_PHONE;
+    });
   });
+
 
 export const deleteReseller = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
