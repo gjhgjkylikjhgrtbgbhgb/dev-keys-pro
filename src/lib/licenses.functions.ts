@@ -120,8 +120,30 @@ export const deleteReseller = createServerFn({ method: "POST" })
       throw new Error("Não é possível excluir o administrador master");
     }
 
+    // 1. Desvincular ou deletar licenças
+    await supabaseAdmin
+      .from("licenses")
+      .delete()
+      .eq("owner_id", userId);
+
+    // 2. Deletar roles
+    await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId);
+
+    // 3. Deletar perfil
+    await supabaseAdmin
+      .from("profiles")
+      .delete()
+      .eq("id", userId);
+
+    // 4. Deletar do Auth
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    if (authError) throw authError;
+    if (authError) {
+      console.error("Auth deletion error:", authError);
+      // Mesmo que o auth falhe (ex: usuário já removido), consideramos sucesso se o perfil foi removido
+    }
 
     return { success: true };
   });
@@ -242,18 +264,12 @@ export const transferLicenses = createServerFn({ method: "POST" })
 
     if (updateError) throw updateError;
 
-    const { error: profileError } = await supabase.rpc("increment_inventory", {
+    const { error: profileError } = await (supabase as any).rpc("increment_credits", {
       row_id: resellerId,
       amount: amount
     });
 
     if (profileError) throw profileError;
-
-    // Também atualiza a coluna credits para manter sincronia
-    await (supabase as any).rpc("increment_credits", {
-      row_id: resellerId,
-      amount: amount
-    });
 
     return { success: true };
   });

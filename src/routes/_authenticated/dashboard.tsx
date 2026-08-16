@@ -550,7 +550,7 @@ function DashboardPage() {
                       <Input 
                         value={resellerForm.phone}
                         onChange={e => setResellerForm({...resellerForm, phone: e.target.value})}
-                        placeholder="11921009176" 
+                        placeholder="DDD + Número" 
                         required 
                         className="bg-[#0F172A] border-white/10"
                       />
