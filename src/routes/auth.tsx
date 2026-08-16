@@ -107,7 +107,7 @@ function AuthPage() {
               <Input
                 id="phone"
                 type="text"
-                placeholder="11921009176"
+                placeholder="DDD + Número"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
