@@ -57,6 +57,7 @@ export type Database = {
           is_blocked: boolean | null
           last_seen: string | null
           license_inventory: number | null
+          parent_id: string | null
           phone: string | null
           support_whatsapp: string | null
         }
@@ -69,6 +70,7 @@ export type Database = {
           is_blocked?: boolean | null
           last_seen?: string | null
           license_inventory?: number | null
+          parent_id?: string | null
           phone?: string | null
           support_whatsapp?: string | null
         }
@@ -81,10 +83,19 @@ export type Database = {
           is_blocked?: boolean | null
           last_seen?: string | null
           license_inventory?: number | null
+          parent_id?: string | null
           phone?: string | null
           support_whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -122,6 +133,14 @@ export type Database = {
       }
       increment_inventory: {
         Args: { amount: number; row_id: string }
+        Returns: undefined
+      }
+      transfer_credits_safe: {
+        Args: {
+          receiver_id: string
+          sender_id: string
+          transfer_amount: number
+        }
         Returns: undefined
       }
     }
