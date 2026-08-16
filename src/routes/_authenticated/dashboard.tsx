@@ -7,7 +7,10 @@ import {
   getResellers, 
   createReseller, 
   updateProfileStatus, 
-  transferLicenses 
+  transferLicenses,
+  toggleAdminStatus,
+  updateLastSeen,
+  deleteExhaustedLicenses
 } from "@/lib/licenses.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,7 +26,7 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { 
   Copy, Upload, CheckCircle2, XCircle, Clock, Database, 
-  Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare 
+  Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare, ShieldAlert
 } from "lucide-react";
 import { format } from "date-fns";
 import { queryOptions } from "@tanstack/react-query";
@@ -94,10 +97,14 @@ function DashboardPage() {
   const createResellerFn = useServerFn(createReseller);
   const updateStatusFn = useServerFn(updateProfileStatus);
   const transferFn = useServerFn(transferLicenses);
+  const toggleAdminFn = useServerFn(toggleAdminStatus);
+  const updateLastSeenFn = useServerFn(updateLastSeen);
+  const deleteExhaustedFn = useServerFn(deleteExhaustedLicenses);
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "" });
+  const [resellerForm, setResellerForm] = useState({ phone: "", password: "", full_name: "", whatsapp: "" });
   const [transferData, setTransferData] = useState({ resellerId: "", amount: 1 });
   const [isTransferOpen, setIsTransferOpen] = useState(false);
 
@@ -108,17 +115,29 @@ function DashboardPage() {
 
   // Verificar se o usuário é admin
   useSuspenseQuery({
-    queryKey: ["is-admin"],
+    queryKey: ["current-user-data"],
     queryFn: async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
-          const { data } = await supabase
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .maybeSingle();
+            
+          setCurrentUser(profile);
+          
+          const { data: roleData } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", session.user.id)
             .maybeSingle();
-          setIsAdmin(data?.role === "admin");
+            
+          setIsAdmin(roleData?.role === "admin" || !!(profile as any)?.is_admin);
+          
+          // Atualiza last_seen
+          updateLastSeenFn();
         }
       } catch (err) {
         console.error("Erro ao verificar admin:", err);
@@ -194,7 +213,7 @@ function DashboardPage() {
     try {
       await createResellerFn({ data: resellerForm });
       toast.success("Revendedor cadastrado!");
-      setResellerForm({ phone: "", password: "", full_name: "" });
+      setResellerForm({ phone: "", password: "", full_name: "", whatsapp: "" });
       window.location.reload();
     } catch (error) {
       toast.error("Erro ao cadastrar revendedor.");
@@ -222,6 +241,26 @@ function DashboardPage() {
     }
   };
 
+  const handleToggleAdmin = async (userId: string, currentAdmin: boolean) => {
+    try {
+      await toggleAdminFn({ data: { userId, isAdmin: !currentAdmin } });
+      toast.success(!currentAdmin ? "Promovido a Admin!" : "Removido status de Admin!");
+      window.location.reload();
+    } catch (error) {
+      toast.error("Erro ao alterar privilégios.");
+    }
+  };
+
+  const handleDeleteExhausted = async () => {
+    try {
+      await deleteExhaustedFn();
+      toast.success("Licenças esgotadas removidas!");
+      window.location.reload();
+    } catch (error) {
+      toast.error("Erro ao remover licenças.");
+    }
+  };
+
   const copyToClipboard = (key: string) => {
     navigator.clipboard.writeText(key);
     toast.info("Chave copiada!");
@@ -234,10 +273,14 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8 space-y-8 dark">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Painel Administrativo</h1>
-          <p className="text-muted-foreground">Bem-vindo à gestão centralizada.</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isAdmin ? "Painel Administrativo" : "Painel do Revendedor"}
+          </h1>
+          <p className="text-muted-foreground">
+            {isAdmin ? "Bem-vindo à gestão centralizada da rede." : `Olá, ${currentUser?.full_name || "Revendedor"}. Gerencie suas licenças.`}
+          </p>
         </div>
         <Button variant="outline" onClick={() => supabase.auth.signOut().then(() => window.location.href = "/auth")}>
           Sair
@@ -247,20 +290,22 @@ function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Geral</CardTitle>
+            <CardTitle className="text-sm font-medium">Estoque Geral</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
+            <p className="text-xs text-muted-foreground">Licenças cadastradas no sistema</p>
           </CardContent>
         </Card>
         <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Licenças Ativas</CardTitle>
+            <CardTitle className="text-sm font-medium">Meus Créditos</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.active}</div>
+            <div className="text-2xl font-bold">{currentUser?.credits || 0}</div>
+            <p className="text-xs text-muted-foreground">Disponíveis para uso</p>
           </CardContent>
         </Card>
         {isAdmin && (
@@ -271,10 +316,40 @@ function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{resellers.length}</div>
+              <p className="text-xs text-muted-foreground">Gestão de Sub-Admins e Revendedores</p>
             </CardContent>
           </Card>
         )}
       </div>
+
+      {currentUser?.credits === 0 && !isAdmin && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center animate-pulse">
+          <h2 className="text-2xl font-bold mb-2">Renove seus créditos</h2>
+          <p>Você não possui licenças disponíveis em seu saldo.</p>
+        </div>
+      )}
+
+      {currentUser?.is_blocked && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <Card className="max-w-md w-full border-destructive">
+            <CardHeader className="text-center">
+              <CardTitle className="text-destructive flex items-center justify-center gap-2">
+                <XCircle className="h-6 w-6" /> Acesso Bloqueado
+              </CardTitle>
+              <CardDescription>
+                Sua conta está temporariamente suspensa. Entre em contato com o suporte.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-center">
+              {currentUser.support_whatsapp && (
+                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => openWhatsApp(currentUser.support_whatsapp)}>
+                  <MessageSquare className="mr-2 h-4 w-4" /> Falar com Suporte
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs defaultValue="licenses" className="w-full">
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
@@ -287,8 +362,14 @@ function DashboardPage() {
 
         <TabsContent value="licenses" className="mt-6">
           <Card className="bg-card border-border">
-            <CardHeader>
-              <CardTitle>Estoque de Licenças</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Estoque de Licenças</CardTitle>
+                <CardDescription>Gerencie suas licenças e remova as já esgotadas.</CardDescription>
+              </div>
+              <Button variant="destructive" size="sm" onClick={handleDeleteExhausted}>
+                <XCircle className="h-4 w-4 mr-2" /> Apagar Licenças Usadas
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -304,7 +385,15 @@ function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {licenses.map((license: any) => (
+                  {licenses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
+                        Nenhuma licença encontrada.
+                      </TableCell>
+                    </TableRow>
+                  ) : licenses
+                    .filter((l: any) => isAdmin || l.owner_id === currentUser?.id)
+                    .map((license: any) => (
                     <TableRow key={license.id}>
                       <TableCell className="font-mono font-bold">{license.key}</TableCell>
                       <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
@@ -372,7 +461,15 @@ function DashboardPage() {
                         required 
                       />
                     </div>
-                    <Button type="submit" className="w-full">Cadastrar</Button>
+                      <div className="space-y-2">
+                        <Label>WhatsApp (Suporte)</Label>
+                        <Input 
+                          value={resellerForm.whatsapp}
+                          onChange={e => setResellerForm({...resellerForm, whatsapp: e.target.value})}
+                          placeholder="Ex: 5511999999999" 
+                        />
+                      </div>
+                      <Button type="submit" className="w-full">Cadastrar</Button>
                   </form>
                 </CardContent>
               </Card>
@@ -387,7 +484,8 @@ function DashboardPage() {
                       <TableRow>
                         <TableHead>Revendedor</TableHead>
                         <TableHead>Contato</TableHead>
-                        <TableHead>Saldo</TableHead>
+                        <TableHead>Visto por último</TableHead>
+                        <TableHead>Saldo [Usadas/Total]</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -401,17 +499,25 @@ function DashboardPage() {
                               <MessageSquare className="h-3 w-3" /> {reseller.phone}
                             </Button>
                           </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {reseller.last_seen ? format(new Date(reseller.last_seen), "dd/MM HH:mm") : "Nunca"}
+                          </TableCell>
                           <TableCell>
                             <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">
-                              {reseller.license_inventory} unid.
+                              {reseller.credits || 0} unid.
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {reseller.is_blocked ? (
-                              <Badge variant="destructive">Bloqueado</Badge>
-                            ) : (
-                              <Badge variant="default" className="bg-green-500/10 text-green-500">Ativo</Badge>
-                            )}
+                            <div className="flex flex-col gap-1">
+                              {reseller.is_blocked ? (
+                                <Badge variant="destructive">Bloqueado</Badge>
+                              ) : (
+                                <Badge variant="default" className="bg-green-500/10 text-green-500">Ativo</Badge>
+                              )}
+                              {reseller.is_admin && (
+                                <Badge variant="outline" className="text-[10px] h-4">Sub-Admin</Badge>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button 
@@ -423,6 +529,14 @@ function DashboardPage() {
                               }}
                             >
                               <Send className="h-3 w-3 mr-1" /> Transferir
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                              className={reseller.is_admin ? "text-blue-500" : ""}
+                            >
+                              {reseller.is_admin ? "Remover Admin" : "Tornar Admin"}
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -443,7 +557,14 @@ function DashboardPage() {
         )}
 
         <TabsContent value="upload" className="mt-6">
-          <Card className="bg-card border-border">
+          {!isAdmin && (
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive p-8 rounded-lg text-center mb-6">
+              <ShieldAlert className="mx-auto h-12 w-12 mb-4" />
+              <h2 className="text-xl font-bold">Acesso Restrito</h2>
+              <p>Apenas administradores podem gerar novas licenças no sistema.</p>
+            </div>
+          )}
+          <Card className={`bg-card border-border ${!isAdmin ? 'opacity-50 pointer-events-none' : ''}`}>
             <CardHeader>
               <CardTitle>Upload em Lote</CardTitle>
               <CardDescription>Apenas o Admin Master pode gerar novas licenças para o estoque geral.</CardDescription>
