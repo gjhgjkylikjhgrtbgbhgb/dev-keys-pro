@@ -450,8 +450,11 @@ export const deleteExhaustedLicenses = createServerFn({ method: "POST" })
 
     // Identifica se é o Master Admin pelo telefone
     const MASTER_PHONE = "11921009176";
-    const userPhone = user.phone?.replace(/\D/g, "") || "";
-    const isMaster = userPhone === MASTER_PHONE;
+    const isMaster = [
+      user.phone || "",
+      (user.user_metadata as any)?.phone || "",
+      (user.email || "").split("@")[0] || "",
+    ].map(v => String(v).replace(/\D/g, "")).includes(MASTER_PHONE);
 
     let query = supabase.from("licenses").delete();
 
@@ -496,8 +499,11 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
     if (!user) throw new Error("Não autorizado");
 
     const MASTER_PHONE = "11921009176";
-    const userPhone = user.phone?.replace(/\D/g, "") || "";
-    const isMaster = userPhone === MASTER_PHONE;
+    const isMaster = [
+      user.phone || "",
+      (user.user_metadata as any)?.phone || "",
+      (user.email || "").split("@")[0] || "",
+    ].map(v => String(v).replace(/\D/g, "")).includes(MASTER_PHONE);
     
     const { data: profile } = await supabaseAdmin
       .from("profiles")
@@ -506,7 +512,7 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
       .single();
 
     const isAdmin = isMaster || profile?.is_admin;
-    if (!isAdmin) throw new Error("Acesso negado");
+    if (!isAdmin) return [];
 
     let query = supabaseAdmin.from("licenses").select("*").order("created_at", { ascending: false });
 
@@ -541,8 +547,11 @@ export const assignLicense = createServerFn({ method: "POST" })
     if (!sender) throw new Error("Não autorizado");
 
     const MASTER_PHONE = "11921009176";
-    const userPhone = sender.phone?.replace(/\D/g, "") || "";
-    const isMaster = userPhone === MASTER_PHONE;
+    const isMaster = [
+      sender.phone || "",
+      (sender.user_metadata as any)?.phone || "",
+      (sender.email || "").split("@")[0] || "",
+    ].map(v => String(v).replace(/\D/g, "")).includes(MASTER_PHONE);
 
     const { data: license } = await supabaseAdmin
       .from("licenses")
