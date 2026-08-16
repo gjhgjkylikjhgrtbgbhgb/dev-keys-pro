@@ -131,9 +131,8 @@ function DashboardPage() {
   // Pegar dados do contexto da rota carregados no loader
   const context = Route.useRouteContext() as any;
   const currentUser = context.profile;
-  const isAdmin = context.isAdmin;
-  const isMaster = (currentUser?.phone || "").replace(/\D/g, "") === "11921009176";
-  const isSubAdmin = !isMaster && isAdmin;
+  const isMasterAdmin = currentUser?.phone?.includes('11921009176') || currentUser?.is_admin === true;
+
 
 
 
@@ -324,15 +323,6 @@ function DashboardPage() {
     }
   };
 
-  const handleToggleAdmin = async (userId: string, currentAdmin: boolean) => {
-    try {
-      await toggleAdminFn({ data: { userId, isAdmin: !currentAdmin } });
-      toast.success(!currentAdmin ? "Promovido a Admin!" : "Removido status de Admin!");
-      await resellersQuery.refetch();
-    } catch (error) {
-      toast.error("Erro ao alterar privilégios.");
-    }
-  };
 
   const handleDeleteReseller = async (userId: string) => {
     if (!confirm("Tem certeza que deseja excluir este revendedor? Esta ação é irreversível.")) return;
@@ -449,10 +439,10 @@ function DashboardPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            {isAdmin ? "Painel Administrativo" : "Painel do Revendedor"}
+            {isMasterAdmin ? "Painel Administrativo" : "Painel do Revendedor"}
           </h1>
           <p className="text-muted-foreground">
-            {isAdmin ? "Bem-vindo à gestão centralizada da rede." : `Olá, ${currentUser?.full_name || "Revendedor"}. Gerencie suas licenças.`}
+            {isMasterAdmin ? "Bem-vindo à gestão centralizada da rede." : `Olá, ${currentUser?.full_name || "Revendedor"}. Gerencie suas licenças.`}
           </p>
         </div>
         <Button variant="outline" onClick={() => supabase.auth.signOut().then(() => window.location.href = "/auth")}>
@@ -461,7 +451,7 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-        {isMaster && (
+        {isMasterAdmin && (
           <>
             <Card className="bg-[#1E293B] border-white/5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1197,7 +1187,7 @@ function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
         )}
       </Tabs>
 
