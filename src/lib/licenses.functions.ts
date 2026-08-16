@@ -200,7 +200,7 @@ export const transferLicenses = createServerFn({ method: "POST" })
     if (profileError) throw profileError;
 
     // Também atualiza a coluna credits para manter sincronia
-    await supabase.rpc("increment_credits", {
+    await (supabase as any).rpc("increment_credits", {
       row_id: resellerId,
       amount: amount
     });
@@ -218,7 +218,7 @@ export const toggleAdminStatus = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("profiles")
-      .update({ is_admin: data.isAdmin })
+      .update({ is_admin: data.isAdmin } as any)
       .eq("id", data.userId);
 
     if (error) throw error;
@@ -235,7 +235,7 @@ export const updateSupportWhatsapp = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { error } = await supabase
       .from("profiles")
-      .update({ support_whatsapp: data.whatsapp })
+      .update({ support_whatsapp: data.whatsapp } as any)
       .eq("id", data.userId);
 
     if (error) throw error;
@@ -269,7 +269,7 @@ export const updateLastSeen = createServerFn({ method: "POST" })
     if (user) {
       await supabase
         .from("profiles")
-        .update({ last_seen: new Date().toISOString() })
+        .update({ last_seen: new Date().toISOString() } as any)
         .eq("id", user.id);
     }
     return { success: true };
