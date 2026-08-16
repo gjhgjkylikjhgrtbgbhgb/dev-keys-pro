@@ -399,13 +399,13 @@ function DashboardPage() {
         </div>
       )}
 
-      <Tabs defaultValue="licenses" className="w-full">
+      <Tabs defaultValue={isAdmin ? "licenses" : "resellers"} className="w-full">
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
-          <TabsTrigger value="licenses" className="px-6 py-2">Licenças</TabsTrigger>
+          <TabsTrigger value="licenses" className={`px-6 py-2 ${!isAdmin ? "hidden" : ""}`}>Licenças</TabsTrigger>
+          <TabsTrigger value="resellers" className="px-6 py-2">Revendedores</TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="resellers" className="px-6 py-2">Revendedores</TabsTrigger>
+            <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
           )}
-          <TabsTrigger value="upload" className="px-6 py-2">Gerar Licenças</TabsTrigger>
         </TabsList>
 
         <TabsContent value="licenses" className="mt-6">
@@ -518,8 +518,7 @@ function DashboardPage() {
           </Card>
         </TabsContent>
 
-        {isAdmin && (
-          <TabsContent value="resellers" className="mt-6 space-y-6">
+        <TabsContent value="resellers" className="mt-6 space-y-6">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-bold">Gestão de Acessos</h2>
               <Dialog open={isResellerModalOpen} onOpenChange={setIsResellerModalOpen}>
@@ -690,14 +689,16 @@ function DashboardPage() {
                             >
                               <Send className="h-3 w-3 mr-1" /> Créditos
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                              className={`border-white/10 hover:bg-white/5 ${reseller.is_admin ? "text-blue-400" : ""}`}
-                            >
-                              {reseller.is_admin ? "Remover Admin" : "Tornar Admin"}
-                            </Button>
+                            {isAdmin && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                                className={`border-white/10 hover:bg-white/5 ${reseller.is_admin ? "text-blue-400" : ""}`}
+                              >
+                                {reseller.is_admin ? "Remover Admin" : "Tornar Admin"}
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon"
