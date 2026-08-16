@@ -600,29 +600,40 @@ function DashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 {isMaster && (
-                  <div {...getRootProps()} className="cursor-pointer">
-                    <input {...getInputProps()} />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="bg-blue-600 hover:bg-blue-700 text-white border-none"
-                      disabled={isProcessing}
+                  <>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          onDrop(Array.from(e.target.files));
+                        }
+                      }}
+                      multiple
+                      accept=".config,.txt"
+                      className="hidden"
+                    />
+                    <Button
                       type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-2 shadow-lg transition-all"
+                      disabled={isProcessing}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
+                      <Upload className="w-4 h-4"/>
                       {isProcessing ? "Enviando..." : "Upload Configs"}
                     </Button>
-                  </div>
+                  </>
                 )}
                 <Button 
                   variant="destructive" 
                   size="sm" 
                   onClick={handleDeleteExhausted}
                   disabled={isProcessing}
+                  className="px-4 py-2 bg-red-600/80 hover:bg-red-700 text-white rounded-lg font-medium flex items-center gap-2"
                   type="button"
                 >
                   <XCircle className="h-4 w-4 mr-2" /> 
-                  {isProcessing ? "Apagando..." : "Apagar Licenças Usadas"}
+                  {isProcessing ? "Apagando..." : "Apagar Licenças"}
                 </Button>
               </div>
             </CardHeader>
