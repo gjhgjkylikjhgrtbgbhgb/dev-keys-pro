@@ -414,8 +414,8 @@ function DashboardPage() {
   };
 
   const handleToggleUpload = async (userId: string, currentStatus: boolean | null | undefined) => {
-    const nextStatus = currentStatus === false; // Se era falso, vira verdadeiro. Se era true/null/undefined, vira falso.
-    const novoStatus = !currentStatus; // Simplificando para o toggle booleano literal
+    // Se for falso, vira true. Se for true/null/undefined, vira falso.
+    const novoStatus = currentStatus === false;
     
     const { error } = await supabase
       .from('profiles')
