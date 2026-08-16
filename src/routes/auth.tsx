@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -65,7 +66,7 @@ function AuthPage() {
           });
           
           if (fallbackError) {
-            throw new Error("Número ou senha incorretos");
+            throw new Error("Credenciais inválidas. Verifique usuário e senha.");
           }
         }
       }
@@ -79,7 +80,7 @@ function AuthPage() {
         authenticated: true 
       }));
 
-      window.location.href = "/dashboard";
+      navigate({ to: "/dashboard" });
     } catch (error: any) {
       console.error("Auth error:", error);
       toast.error(error.message || "Erro ao realizar login");
