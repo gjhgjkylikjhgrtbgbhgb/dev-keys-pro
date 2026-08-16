@@ -707,7 +707,7 @@ function DashboardPage() {
                         <span>Usos: {license.uses_remaining}/3</span>
                         <span>{format(new Date(license.created_at), "dd/MM HH:mm")}</span>
                       </div>
-                      {isAdmin && (
+                      {isMasterAdmin && (
                         <div className="text-xs">
                           Dono: {license.owner?.full_name || "Livre"}
                         </div>
