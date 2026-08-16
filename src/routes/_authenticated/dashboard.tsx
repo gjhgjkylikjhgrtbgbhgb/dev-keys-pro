@@ -916,14 +916,27 @@ function DashboardPage() {
                               <Send className="h-3 w-3 mr-1" /> Créditos
                             </Button>
                             {isMaster && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
-                                className={`border-white/10 hover:bg-white/5 ${reseller.is_admin ? "text-blue-400" : ""}`}
-                              >
-                                {reseller.is_admin ? "Remover Admin" : "Tornar Admin"}
-                              </Button>
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className={`border-white/10 ${reseller.can_upload ? 'text-red-400 hover:text-red-300' : 'text-green-400 hover:text-green-300'}`}
+                                  onClick={() => handleToggleUpload(reseller.id, reseller.can_upload)}
+                                  title={reseller.can_upload ? "Bloquear Upload" : "Liberar Upload"}
+                                >
+                                  {reseller.can_upload ? <Lock className="h-3 w-3 mr-1" /> : <Unlock className="h-3 w-3 mr-1" />}
+                                  {reseller.can_upload ? "Bloquear" : "Liberar"}
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="border-white/10 text-blue-400 hover:text-blue-300"
+                                  onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                                >
+                                  <ShieldAlert className="h-3 w-3 mr-1" />
+                                  {reseller.is_admin ? "Remover Sub" : "Tornar Sub"}
+                                </Button>
+                              </>
                             )}
                             <Button 
                               variant="ghost" 
