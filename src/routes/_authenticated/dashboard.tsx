@@ -273,10 +273,14 @@ function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-8 space-y-8 dark">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Painel Administrativo</h1>
-          <p className="text-muted-foreground">Bem-vindo à gestão centralizada.</p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isAdmin ? "Painel Administrativo" : "Painel do Revendedor"}
+          </h1>
+          <p className="text-muted-foreground">
+            {isAdmin ? "Bem-vindo à gestão centralizada da rede." : `Olá, ${currentUser?.full_name || "Revendedor"}. Gerencie suas licenças.`}
+          </p>
         </div>
         <Button variant="outline" onClick={() => supabase.auth.signOut().then(() => window.location.href = "/auth")}>
           Sair
