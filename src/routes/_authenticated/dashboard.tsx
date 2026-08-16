@@ -642,7 +642,7 @@ function DashboardPage() {
                     <TableRow className="border-white/5">
                       <TableHead>Chave</TableHead>
                       <TableHead>Arquivo</TableHead>
-                      {isAdmin && <TableHead>Dono</TableHead>}
+                      {isMasterAdmin && <TableHead>Dono</TableHead>}
                       <TableHead>Usos</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Data</TableHead>
@@ -652,7 +652,7 @@ function DashboardPage() {
                   <TableBody>
                     {licenses.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
+                        <TableCell colSpan={isMasterAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
                           Nenhuma licença encontrada.
                         </TableCell>
                       </TableRow>
@@ -660,7 +660,7 @@ function DashboardPage() {
                       <TableRow key={license.id} className="border-white/5">
                         <TableCell className="font-mono font-bold">{license.key}</TableCell>
                         <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
-                        {isAdmin && (
+                        {isMasterAdmin && (
                           <TableCell>
                             {license.owner?.full_name || <Badge variant="outline">Livre</Badge>}
                           </TableCell>
