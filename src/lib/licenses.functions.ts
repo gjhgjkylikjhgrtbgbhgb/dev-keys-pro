@@ -82,12 +82,12 @@ export const getResellers = createServerFn({ method: "GET" })
     
     const MASTER_PHONE = "+5511921009176";
     
-    const { data: profiles, error } = await supabase
+    const { data: profiles, error: profileError } = await supabase
       .from("profiles")
       .select("*")
       .neq("phone", MASTER_PHONE);
 
-    if (error) throw error;
+    if (profileError) throw profileError;
     
     // Filtramos apenas aqueles que têm a role 'reseller' no user_roles
     const { data: roles } = await supabase
@@ -98,9 +98,6 @@ export const getResellers = createServerFn({ method: "GET" })
     const resellerIds = new Set((roles || []).map(r => r.user_id));
     
     return (profiles || []).filter(p => resellerIds.has(p.id));
-
-    if (error) throw error;
-    return data || [];
   });
 
 export const deleteReseller = createServerFn({ method: "POST" })
@@ -150,18 +147,15 @@ export const createReseller = createServerFn({ method: "POST" })
       normalizedPhone = `+55${normalizedPhone.replace(/\D/g, "")}`;
     }
 
-    // Tenta encontrar se já existe para dar erro amigável ou vincular perfil
-    const { data: existingProfiles } = await supabaseAdmin
-      .from("profiles")
-      .select("id, phone")
-      .eq("phone", normalizedPhone)
-      .maybeSingle();
-
+    // Tenta encontrar se já existe no auth via admin para evitar erro de duplicidade
+    const { data: listUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const foundUser = listUsers.users.find(u => u.phone === normalizedPhone);
+    
     let userId: string;
 
-    if (existingProfiles) {
-      userId = existingProfiles.id;
-      console.log("Vínculo de perfil existente para:", normalizedPhone);
+    if (foundUser) {
+      userId = foundUser.id;
+      console.log("Usuário auth já existe:", normalizedPhone);
     } else {
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         phone: normalizedPhone,
@@ -170,38 +164,16 @@ export const createReseller = createServerFn({ method: "POST" })
         user_metadata: { full_name, whatsapp }
       });
 
-      if (authError) {
-        if (authError.message.includes("already registered")) {
-          // Se o Auth User existe mas o perfil não, tentamos pegar o ID pelo phone (se possível via admin)
-          const { data: listUsers } = await supabaseAdmin.auth.admin.listUsers();
-          const foundUser = listUsers.users.find(u => u.phone === normalizedPhone);
-          if (foundUser) {
-            userId = foundUser.id;
-          } else {
-            throw new Error("Este telefone já está registrado no sistema auth, mas o perfil não pôde ser recuperado.");
-          }
-        } else {
-          throw authError;
-        }
-      } else {
-        userId = authUser.user.id;
-      }
+      if (authError) throw authError;
+      userId = authUser.user.id;
     }
 
-    // Garante a role de reseller
-    const { data: existingRole } = await supabaseAdmin
+    // Garante a role de reseller (upsert para evitar erros se já existir)
+    const { error: roleError } = await supabaseAdmin
       .from("user_roles")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("role", "reseller")
-      .maybeSingle();
-
-    if (!existingRole) {
-      const { error: roleError } = await supabaseAdmin
-        .from("user_roles")
-        .upsert({ user_id: userId, role: "reseller" }, { onConflict: 'user_id,role' });
-      if (roleError) throw roleError;
-    }
+      .upsert({ user_id: userId, role: "reseller" }, { onConflict: 'user_id,role' });
+    
+    if (roleError) throw roleError;
 
     // Garante o perfil completo (upsert)
     const { error: profileError } = await supabaseAdmin
@@ -213,9 +185,9 @@ export const createReseller = createServerFn({ method: "POST" })
         credits: 0,
         is_blocked: false,
         is_admin: false,
-        support_whatsapp: data.whatsapp || "",
+        support_whatsapp: whatsapp || "",
         last_seen: new Date().toISOString()
-      }, { onConflict: 'id' });
+      } as any, { onConflict: 'id' });
 
     if (profileError) throw profileError;
 
