@@ -1072,8 +1072,15 @@ function DashboardPage() {
                         >
                           {reseller.is_admin ? "Remover Privilégios Admin" : "Tornar Sub-Admin"}
                         </Button>
+                        <Button 
+                          onClick={() => handleToggleAdmin(reseller.id, reseller.is_admin)}
+                          className="w-full py-2 bg-purple-600 text-white rounded text-xs mt-2"
+                        >
+                          {reseller.is_admin ? '👑 Remover Sub-Admin' : '⭐ Tornar Sub-Admin'}
+                        </Button>
                       </div>
                     )}
+
                   </CardContent>
                 </Card>
               ))}
