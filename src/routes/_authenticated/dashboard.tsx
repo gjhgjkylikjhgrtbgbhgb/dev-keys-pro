@@ -532,6 +532,7 @@ function DashboardPage() {
         onValueChange={(value) => {
           if (value === "resellers") resellersQuery.refetch();
           if (value === "licenses") licensesQuery.refetch();
+          if (value === "unassigned") unassignedQuery.refetch();
         }}
       >
         <TabsList className="bg-muted w-full justify-start overflow-x-auto h-auto p-1">
