@@ -435,7 +435,7 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
-        {isAdmin && (
+        {isMaster && (
           <>
             <Card className="bg-[#1E293B] border-white/5">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -455,7 +455,7 @@ function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.assigned}</div>
-                <p className="text-xs text-muted-foreground">Em posse de revendedores</p>
+                <p className="text-xs text-muted-foreground">Distribuídas na rede</p>
               </CardContent>
             </Card>
 
@@ -466,7 +466,33 @@ function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stats.unassigned}</div>
-                <p className="text-xs text-muted-foreground">Disponíveis em estoque</p>
+                <p className="text-xs text-muted-foreground">Sem dono no estoque</p>
+              </CardContent>
+            </Card>
+          </>
+        )}
+        
+        {!isMaster && isSubAdmin && (
+          <>
+            <Card className="bg-[#1E293B] border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Minhas Repassadas</CardTitle>
+                <Send className="h-4 w-4 text-blue-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.assigned}</div>
+                <p className="text-xs text-muted-foreground">Enviadas aos meus revendedores</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#1E293B] border-white/5">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Minhas Livres</CardTitle>
+                <Unlock className="h-4 w-4 text-green-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.unassigned}</div>
+                <p className="text-xs text-muted-foreground">Disponíveis para repasse</p>
               </CardContent>
             </Card>
           </>
