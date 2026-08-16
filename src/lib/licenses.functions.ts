@@ -13,7 +13,7 @@ export const getLicenseStats = createServerFn({ method: "GET" })
 
     // Master vê tudo; Revendedor vê apenas as suas
     const MASTER_PHONE = "11921009176";
-    const phoneRaw = (user.phone || user.user_metadata?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
+    const phoneRaw = (user.phone || (user.user_metadata as any)?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
     const isMaster = phoneRaw.includes(MASTER_PHONE);
 
     // Buscar perfil para verificar se é admin
@@ -72,7 +72,7 @@ export const getLicenses = createServerFn({ method: "GET" })
     if (!user) throw new Error("Não autorizado");
 
     const MASTER_PHONE = "11921009176";
-    const phoneRaw = (user.phone || user.user_metadata?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
+    const phoneRaw = (user.phone || (user.user_metadata as any)?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
     const isMaster = phoneRaw.includes(MASTER_PHONE);
 
     let query = supabaseAdmin
@@ -137,7 +137,7 @@ export const getResellers = createServerFn({ method: "GET" })
     if (!user) throw new Error("Não autorizado");
 
     const MASTER_PHONE = "11921009176";
-    const phoneRaw = (user.phone || user.user_metadata?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
+    const phoneRaw = (user.phone || (user.user_metadata as any)?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
     const isMaster = phoneRaw.includes(MASTER_PHONE);
 
     // Usamos o client admin para garantir a leitura completa (evita bloqueio de RLS),
@@ -232,7 +232,7 @@ export const createReseller = createServerFn({ method: "POST" })
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Não autorizado");
 
-    const phoneRaw = (user.phone || user.user_metadata?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
+    const phoneRaw = (user.phone || (user.user_metadata as any)?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
     const isMaster = phoneRaw.includes("11921009176");
     // Usar o parent_id vindo do frontend ou decidir pelo contexto
     const finalParentId = parent_id !== undefined ? parent_id : (isMaster ? null : user.id);
@@ -356,7 +356,7 @@ export const transferLicenses = createServerFn({ method: "POST" })
     }
 
     // 2. Tentar vincular licenças físicas se for o Master
-    const phoneRaw = (sender.phone || sender.user_metadata?.phone || (sender.email || "").split("@")[0] || "").replace(/\D/g, "");
+    const phoneRaw = (sender.phone || (sender.user_metadata as any)?.phone || (sender.email || "").split("@")[0] || "").replace(/\D/g, "");
     const isMaster = phoneRaw.includes("11921009176");
 
     if (isMaster) {
@@ -438,7 +438,7 @@ export const deleteExhaustedLicenses = createServerFn({ method: "POST" })
 
     // Identifica se é o Master Admin pelo telefone
     const MASTER_PHONE = "11921009176";
-    const phoneRaw = (user.phone || user.user_metadata?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
+    const phoneRaw = (user.phone || (user.user_metadata as any)?.phone || (user.email || "").split("@")[0] || "").replace(/\D/g, "");
     const isMaster = phoneRaw.includes(MASTER_PHONE);
 
     let query = supabase.from("licenses").delete();
