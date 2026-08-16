@@ -385,7 +385,13 @@ function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {licenses.map((license: any) => (
+                  {licenses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-muted-foreground">
+                        Nenhuma licença encontrada.
+                      </TableCell>
+                    </TableRow>
+                  ) : licenses.map((license: any) => (
                     <TableRow key={license.id}>
                       <TableCell className="font-mono font-bold">{license.key}</TableCell>
                       <TableCell className="max-w-[150px] truncate">{license.filename}</TableCell>
