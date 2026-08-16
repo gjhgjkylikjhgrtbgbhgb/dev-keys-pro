@@ -26,7 +26,7 @@ import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
 import { 
   Copy, Upload, CheckCircle2, XCircle, Clock, Database, 
-  Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare 
+  Users, UserPlus, Phone, Lock, Unlock, Send, MessageSquare, ShieldAlert
 } from "lucide-react";
 import { format } from "date-fns";
 import { queryOptions } from "@tanstack/react-query";
