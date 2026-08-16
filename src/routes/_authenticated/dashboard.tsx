@@ -75,6 +75,18 @@ const resellersQueryOptions = queryOptions({
   },
 });
 
+const unassignedQueryOptions = queryOptions({
+  queryKey: ["unassigned-licenses"],
+  queryFn: async () => {
+    try {
+      return await getUnassignedLicenses();
+    } catch (error) {
+      console.error("Unassigned Licenses error:", error);
+      return [];
+    }
+  },
+});
+
 function licenseStatusLabel(license: any) {
   if (license.status === "blocked") return "Bloqueada";
   if (license.status !== "active" || (license.uses_remaining ?? 0) <= 0) return "Usada";
