@@ -12,8 +12,8 @@ export const Route = createFileRoute("/_authenticated")({
     
     // Identificação imediata do Master Admin no loader para evitar flicker
     const MASTER_PHONE = "11921009176";
-    const phoneNormalized = ((data.user as any).phone || "").replace(/\D/g, "");
-    const isMaster = phoneNormalized.includes(MASTER_PHONE);
+    const phoneRaw = (data.user.phone || (data.user as any).user_metadata?.phone || (data.user.email || "").split("@")[0] || "").replace(/\D/g, "");
+    const isMaster = phoneRaw.includes(MASTER_PHONE);
 
     // Buscar perfil e roles antecipadamente
     const { data: profile } = await supabase
