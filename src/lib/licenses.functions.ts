@@ -517,6 +517,7 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
 
     if (isMaster) {
       // Master Admin: busca licenças sem dono ou com status de estoque livre
+      // Garantimos que 'owner_id is null' capture o estoque global
       query = query.or('owner_id.is.null,status.eq.livre,status.eq.disponivel,status.eq.available,status.eq.active');
     } else {
       // Sub-Admin: busca configs atribuídas a ele que ainda estão livres para repassar
@@ -526,7 +527,10 @@ export const getUnassignedLicenses = createServerFn({ method: "GET" })
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error("Erro na query de licenças livres:", error);
+      throw error;
+    }
     return data || [];
   });
 
