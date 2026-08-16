@@ -413,13 +413,20 @@ function DashboardPage() {
     }
   };
 
-  const handleToggleUpload = async (userId: string, currentStatus: boolean) => {
-    try {
-      await updateUploadPermissionFn({ data: { userId, canUpload: !currentStatus } });
-      toast.success(!currentStatus ? "Upload liberado!" : "Upload bloqueado!");
-      await resellersQuery.refetch();
-    } catch (error) {
-      toast.error("Erro ao alterar permissão de upload.");
+  const handleToggleUpload = async (userId: string, currentStatus: boolean | null | undefined) => {
+    // Se for undefined ou null, assumimos que está liberado (true), então o próximo será bloqueado (false)
+    const nextStatus = currentStatus === false ? true : false;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ can_upload: nextStatus })
+      .eq('id', userId);
+
+    if (error) {
+      toast.error("Erro ao salvar no banco: " + error.message);
+    } else {
+      toast.success(nextStatus ? "Upload Liberado!" : "Upload Bloqueado!");
+      resellersQuery.refetch(); // Recarrega a lista de revendedores
     }
   };
 
