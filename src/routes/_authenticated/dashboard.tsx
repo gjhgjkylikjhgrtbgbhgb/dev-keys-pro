@@ -604,7 +604,7 @@ function DashboardPage() {
                       <Input 
                         value={resellerForm.whatsapp}
                         onChange={e => setResellerForm({...resellerForm, whatsapp: e.target.value})}
-                        placeholder="Ex: 5511999999999" 
+                        placeholder="Ex: 5511999998888" 
                         className="bg-[#0F172A] border-white/10"
                       />
                     </div>
