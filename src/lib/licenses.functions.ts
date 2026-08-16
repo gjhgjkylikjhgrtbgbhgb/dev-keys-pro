@@ -255,11 +255,24 @@ export const deleteExhaustedLicenses = createServerFn({ method: "POST" })
     
     if (!user) throw new Error("Não autorizado");
 
-    const { error } = await supabase
-      .from("licenses")
-      .delete()
-      .eq("owner_id", user.id)
-      .eq("status", "exhausted");
+    // Identifica se é o Master Admin pelo telefone
+    const MASTER_PHONE = "11921009176";
+    const userPhone = user.phone?.replace(/\D/g, "") || "";
+    const isMaster = userPhone === MASTER_PHONE;
+
+    let query = supabase.from("licenses").delete();
+
+    if (isMaster) {
+      // Master deleta todas as esgotadas do sistema
+      query = query.or("uses_remaining.lte.0,status.eq.exhausted");
+    } else {
+      // Revendedor deleta apenas as suas esgotadas
+      query = query
+        .eq("owner_id", user.id)
+        .or("uses_remaining.lte.0,status.eq.exhausted");
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
     return { success: true };

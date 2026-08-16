@@ -230,13 +230,25 @@ function DashboardPage() {
     }
   };
 
-  const handleDeleteExhausted = async () => {
+  const handleDeleteExhausted = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     try {
-      await deleteExhaustedFn();
-      toast.success("Licenças esgotadas removidas!");
+      const { error } = await (isAdmin 
+        ? supabase.from("licenses").delete().or("uses_remaining.lte.0,status.eq.exhausted")
+        : supabase.from("licenses").delete().eq("owner_id", currentUser?.id).or("uses_remaining.lte.0,status.eq.exhausted")
+      );
+
+      if (error) throw error;
+
+      toast.success("Licenças usadas removidas com sucesso!");
       window.location.reload();
-    } catch (error) {
-      toast.error("Erro ao remover licenças.");
+    } catch (error: any) {
+      console.error("Erro ao deletar licenças:", error);
+      toast.error(error.message || "Erro ao remover licenças.");
     }
   };
 
