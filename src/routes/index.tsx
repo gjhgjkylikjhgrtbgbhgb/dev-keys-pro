@@ -1,18 +1,15 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { createFileRoute } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: async ({ context }) => {
-    const { data } = await supabase.auth.getUser();
-    if (data.user) {
-      throw redirect({ to: "/dashboard" });
-    }
-    throw redirect({ to: "/auth" });
-  },
-  component: () => null,
+  component: DeprecationScreen,
 });
 
-
-
-
-
+function DeprecationScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-black px-4 text-center">
+      <h1 className="text-2xl font-semibold text-white">
+        Projeto Desativado - Painel Migrado
+      </h1>
+    </div>
+  );
+}
